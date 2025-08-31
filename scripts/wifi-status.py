@@ -86,7 +86,7 @@ def get_wifi_status(interfaces):
     return statuses
 
 def main():
-    config_file = os.path.join(Path.cwd(), 'wifi-status.json')
+    config_file = util.get_config_file_path('wifi-status.json')
     config, err = util.parse_config_file(config_file)
     if err != '':
         print(f'WiFi Status: {err}')

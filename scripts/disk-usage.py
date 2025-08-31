@@ -53,7 +53,7 @@ def get_disk_usage(mountpoints: list) -> list:
     return filesystems
 
 def main():
-    config_file = os.path.join(Path.cwd(), 'disk-usage.json')
+    config_file = util.get_config_file_path('disk-usage.json')
     config, err = util.parse_config_file(config_file)
     if err != '':
         print(f'Disk Usage: {err}')

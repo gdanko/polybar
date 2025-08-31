@@ -1,3 +1,4 @@
+from pathlib import Path
 from pprint import pprint as pp
 from typing import Optional
 import json
@@ -100,3 +101,12 @@ def parse_config_file(filename: str=''):
             return {}, e
     else:
         return {}, f'{filename} does not exist'
+
+def get_config_file_path(filename: str='') -> str:
+    return os.path.join(
+        Path.home(),
+        '.config',
+        'polybar',
+        'scripts',
+        filename
+    )

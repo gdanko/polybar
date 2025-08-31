@@ -97,7 +97,7 @@ def get_weather(api_key, locations, days, use_celsius):
             return "Weather data unavailable"
 
 def main():
-    config_file = os.path.join(Path.cwd(), 'weather.json')
+    config_file = util.get_config_file_path('weather.json')
     config, err = util.parse_config_file(config_file)
     if err != '':
         print(f'Weather: {err}')
