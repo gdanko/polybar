@@ -92,17 +92,6 @@ def file_exists(filename: str='') -> bool:
         return True
     return False
 
-def parse_config_file(filename: str=''):
-    if file_exists(filename):
-        try:
-            with open(filename, 'r') as f:
-                config = json.load(f)
-            return config, ''
-        except Exception as e:
-            return {}, e
-    else:
-        return {}, f'{filename} does not exist'
-
 def get_config_file_path(filename: str='') -> str:
     return os.path.join(
         Path.home(),
@@ -111,6 +100,29 @@ def get_config_file_path(filename: str='') -> str:
         'scripts',
         filename
     )
+
+def parse_config_file(filename: str='', required_keys: list=[]):
+    # Does the file exist?
+    if not file_exists(filename):
+        return {}, f'{filename} does not exist'
+
+    # Can we parse the JSON?
+    try:
+        with open(filename, 'r') as f:
+            config = json.load(f)
+    except Exception as e:
+        return {}, e
+
+    # Check for missing required keys
+    if len(required_keys) > 0:
+        missing = []
+        for required_key in required_keys:
+            if not required_key in config:
+                missing.append(required_key)
+        if len(missing) > 0:
+            return {}, f'required keys missing from config: {','.join(missing)}'
+
+    return config, ''
 
 def is_binary_installed(binary_name: str) -> bool:
     return shutil.which(binary_name) is not None
