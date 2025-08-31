@@ -66,13 +66,13 @@ def main():
     disk_icon = util.surrogatepass('\udb80\udeca')
 
     parser = argparse.ArgumentParser(description="Get disk info from df(1)")
-    parser.add_argument("-m", "--mount", help="The mountpoint to check", required=False)
+    parser.add_argument("-m", "--mount", action='append', help="The mountpoint to check; can be used multiple times", required=False)
     parser.add_argument("-u", "--unit", help="The unit to use for display", choices=util.get_valid_units(), required=False)
     args = parser.parse_args()
 
     # Determine the filesystems to measure
     if args.mount:
-        mountpoints = [args.mount]
+        mountpoints = args.mount
     else:
         if len(config['filesystems']) == 0:
             print('Disk Usage: No mountpoints defined')
