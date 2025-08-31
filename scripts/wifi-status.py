@@ -7,36 +7,23 @@ import os
 import re
 import sys
 
-def get_memory_usage():
+def get_status_icon(signal):
     """
-    Execute free -b -w and return a dictionary with its values
+    Return a wifi icon based on signal strength
     """
-    try:
-        # Run free -b -w
-        result = subprocess.run(['free', '-b', '-w'], capture_output=True, text=True, check=True)
-        lines = result.stdout.strip().split('\n')
-        
-        if len(lines) != 3:
-            return {}
 
-        # Split header and values
-        values = lines[1].split()
-
-        # Construct simplified dict
-        mem_dict = {
-            'total':     int(values[1]),
-            'used':      int(values[2]),
-            'free':      int(values[3]),
-            'shared':    int(values[4]),
-            'buffers':   int(values[5]),
-            'cache':     int(values[6]),
-            'available': int(values[7]),
-        }
-        return mem_dict
-            
-    except subprocess.CalledProcessError as e:
-        print(f"Error running free -b -w: {e}", file=sys.stderr)
-        sys.exit(1)
+    if signal >= 30:
+        return util.surrogatepass('\udb82\udd28') # md_wifi_strength_4
+    elif signal >= -50:
+        return util.surrogatepass('\udb82\udd25') # md_wifi_strength_3
+    elif signal >= -60:
+        return util.surrogatepass('\udb82\udd22') # md_wifi_strength_2
+    elif signal >= -70:
+        return util.surrogatepass('\udb82\udd1f') # md_wifi_strength_1
+    elif signal >= -80:
+        return util.surrogatepass('\udb82\udd2f') # md_wifi_strength_outline
+    elif signal >= -90:
+        return util.surrogatepass('\udb82\udd2b') # md_wifi_strength_alert_outline
 
 def get_wifi_status(interfaces):
     """
@@ -87,7 +74,7 @@ def get_wifi_status(interfaces):
     else:
         status_dict = {
             'success':   False,
-            'interface': 'WiFi Status',
+            'interface': '',
             'error':     f'please install {binary}'
         }
         statuses.append(status_dict)
@@ -124,10 +111,11 @@ def main():
     output = []
     for status in wifi_statuses:
         if status['success']:
-            # add the icon!
-            output.append(f'{start_colorize}{status["interface"]}{end_colorize} {status["signal"]} dBm')
+            wifi_icon = get_status_icon(status["signal"])
+            output.append(f'{start_colorize}{start_nerdfont}{wifi_icon}{end_nerdfont}{end_colorize} {status["interface"]} {status["signal"]} dBm')
         else:
-            output.append(f'{start_colorize}{status["interface"]}{end_colorize} {status["error"]}')
+            wifi_icon = util.surrogatepass('\udb82\udd2d')
+            output.append(f'{start_colorize}{start_nerdfont}{wifi_icon}{end_nerdfont}{end_colorize} {status["interface"]} {status["error"]}')
     
     print(' | '.join(output))
 
