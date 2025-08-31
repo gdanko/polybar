@@ -43,44 +43,53 @@ def get_wifi_status(interfaces):
     Execute iwconfig against each interface to get its status
     """
 
+    binary = 'iwconfig'
     statuses = []
 
-    for interface in interfaces:
-        rc, stdout, stderr = util.run_piped_command(f'iwconfig {interface}')
-        if rc == 0:
-            if stdout != '':
-                match = re.search(r"Signal level=(-?\d+)\s*dBm", stdout)
-                if match:
+    if util.is_binary_installed(binary):
+        for interface in interfaces:
+            rc, stdout, stderr = util.run_piped_command(f'{binary} {interface}')
+            if rc == 0:
+                if stdout != '':
+                    match = re.search(r"Signal level=(-?\d+)\s*dBm", stdout)
+                    if match:
+                        status_dict = {
+                            'success':   True,
+                            'interface': interface,
+                            'signal':    int(match.group(1)),
+                        }
+                    else:
+                        status_dict = {
+                            'success':   False,
+                            'interface': interface,
+                            'error':     f'regex failure on output',
+                        }
+                else:
                     status_dict = {
-                        'success':   True,
+                        'success':   False,
                         'interface': interface,
-                        'signal':    int(match.group(1)),
+                        'error':     f'no output from iwconfig {interface}',
+                    }
+            else:
+                if stderr != '':
+                    status_dict = {
+                        'success':   False,
+                        'interface': interface,
+                        'error':     stderr.strip(),
                     }
                 else:
                     status_dict = {
                         'success':   False,
                         'interface': interface,
-                        'error':     f'regex failure on output',
+                        'error':     f'non-zero exit code',
                     }
-            else:
-                status_dict = {
-                    'success':   False,
-                    'interface': interface,
-                    'error':     f'no output from iwconfig {interface}',
-                }
-        else:
-            if stderr != '':
-                status_dict = {
-                    'success':   False,
-                    'interface': interface,
-                    'error':     stderr.strip(),
-                }
-            else:
-                status_dict = {
-                    'success':   False,
-                    'interface': interface,
-                    'error':     f'non-zero exit code',
-                }
+            statuses.append(status_dict)
+    else:
+        status_dict = {
+            'success':   False,
+            'interface': 'WiFi Status',
+            'error':     f'please install {binary}'
+        }
         statuses.append(status_dict)
     
     return statuses
