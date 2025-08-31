@@ -53,16 +53,17 @@ def get_disk_usage(mountpoints: list) -> list:
     return filesystems
 
 def main():
-    config_file = util.get_config_file_path('disk-usage.json')
-    config, err = util.parse_config_file(config_file)
-    if err != '':
-        print(f'Disk Usage: {err}')
-        sys.exit(1)
-    
     start_colorize = '%{F#F0C674}'
     end_colorize = '%{F-}'
     start_nerdfont = '%{T3}'
     end_nerdfont = '%{T-}'
+
+    config_file = util.get_config_file_path('disk-usage.json')
+    config, err = util.parse_config_file(filename=config_file, required_keys=['filesystems'])
+    if err != '':
+        print(f'{start_colorize}Disk Usage{end_colorize}: {err}')
+        sys.exit(1)
+
     disk_icon = util.surrogatepass('\udb80\udeca')
 
     parser = argparse.ArgumentParser(description="Get disk info from df(1)")
