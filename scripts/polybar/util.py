@@ -4,6 +4,7 @@ from typing import Optional
 import json
 import os
 import shlex
+import shutil
 import subprocess
 
 def pprint(input):
@@ -110,3 +111,6 @@ def get_config_file_path(filename: str='') -> str:
         'scripts',
         filename
     )
+
+def is_binary_installed(binary_name: str) -> bool:
+    return shutil.which(binary_name) is not None
