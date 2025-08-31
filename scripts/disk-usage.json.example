@@ -1,0 +1,4 @@
+{
+  "filesystems": ["/", "/work"],
+  "unit": "auto"
+}
