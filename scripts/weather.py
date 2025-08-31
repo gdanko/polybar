@@ -65,7 +65,13 @@ def get_weather_icon(condition_code, is_day):
         else:
             return glyphs.md_weather_partly_snowy
 
-    elif condition_code in [1066, 1204, 1249]: # Patchy sleet possible / Light sleet /Light sleet showers
+    elif condition_code == 1114: # Blowing snow
+        if is_day == 1:
+            return glyphs.weather_snow_wind
+        else:
+            return glyphs.weather_day_snow_wind
+
+    elif condition_code in [1069, 1204, 1249]: # Patchy sleet possible / Light sleet /Light sleet showers
         if is_day == 1:
             return glyphs.weather_day_sleet
         else:
