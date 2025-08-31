@@ -2,5 +2,4 @@
   "api_key": "<OpenWeatherMap API key>",
   "locations": ["San Diego, CA, US"],
   "use_celsius": false,
-  "days": 2
 }

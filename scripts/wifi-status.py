@@ -88,11 +88,6 @@ def main():
         print(f'WiFi Status: {err}')
         sys.exit(1)
 
-    start_colorize = '%{F#F0C674}'
-    end_colorize = '%{F-}'
-    start_nerdfont = '%{T3}'
-    end_nerdfont = '%{T-}'
-
     parser = argparse.ArgumentParser(description="Get WiFi status from iwconfig(8)")
     parser.add_argument("-i", "--interface", action='append', help="The interface to check; can be used multiple times", required=False)
     args = parser.parse_args()
@@ -112,10 +107,10 @@ def main():
     for status in wifi_statuses:
         if status['success']:
             wifi_icon = get_status_icon(status["signal"])
-            output.append(f'{start_colorize}{start_nerdfont}{wifi_icon}{end_nerdfont}{end_colorize} {status["interface"]} {status["signal"]} dBm')
+            output.append(f'{util.colorize(wifi_icon)} {status["interface"]} {status["signal"]} dBm')
         else:
             wifi_icon = util.surrogatepass('\udb82\udd2d')
-            output.append(f'{start_colorize}{start_nerdfont}{wifi_icon}{end_nerdfont}{end_colorize} {status["interface"]} {status["error"]}')
+            output.append(f'{util.colorize(wifi_icon)} {status["interface"]} {status["error"]}')
     
     print(' | '.join(output))
 

@@ -43,10 +43,6 @@ def get_memory_usage():
     return mem_dict
 
 def main():
-    start_colorize = '%{F#F0C674}'
-    end_colorize = '%{F-}'
-    start_nerdfont = '%{T3}'
-    end_nerdfont = '%{T-}'
     memory_icon = util.surrogatepass('\udb80\udf5b') # md_memory
 
     parser = argparse.ArgumentParser(description="Get memory usage from free(1)")
@@ -56,9 +52,9 @@ def main():
     memory_info = get_memory_usage()
 
     if memory_info['success']:
-        memory_usage = f'{start_colorize}{start_nerdfont}{memory_icon}{end_nerdfont}{end_colorize} {util.byte_converter(memory_info["used"], unit=args.unit)} / {util.byte_converter(memory_info["total"], unit=args.unit)}'
+        memory_usage = f'{util.colorize(memory_icon)} {util.byte_converter(memory_info["used"], unit=args.unit)} / {util.byte_converter(memory_info["total"], unit=args.unit)}'
     else:
-        memory_usage = f'{start_colorize}{start_nerdfont}{memory_icon}{end_nerdfont}{end_colorize} {memory_info['error']}'
+        memory_usage = f'{util.colorize(memory_icon)} {memory_info['error']}'
 
     print(memory_usage)
 

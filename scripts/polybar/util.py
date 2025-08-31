@@ -126,3 +126,15 @@ def parse_config_file(filename: str='', required_keys: list=[]):
 
 def is_binary_installed(binary_name: str) -> bool:
     return shutil.which(binary_name) is not None
+
+def parse_json_string(input: str=''):
+    try:
+        json_data = json.loads(input)
+        return json_data, None
+    except Exception as err:
+        return None, err, 
+
+def colorize(text: str='') -> str:
+    start_colorize = '%{F#F0C674}'
+    end_colorize = '%{F-}'
+    return f'{start_colorize}{text}{end_colorize}'

@@ -59,11 +59,6 @@ def get_cpu_usage():
     return cpu_dict
 
 def main():
-    start_colorize = '%{F#F0C674}'
-    end_colorize = '%{F-}'
-    start_nerdfont = '%{T3}'
-    end_nerdfont = '%{T-}'
-
     if platform.machine() == 'x86':
         cpu_icon = util.surrogatepass('\udb83\udedf')
     elif platform.machine() == 'x86_64':
@@ -74,9 +69,9 @@ def main():
     cpu_info = get_cpu_usage()
 
     if cpu_info['success']:
-        cpu_usage = f'{start_colorize}{start_nerdfont}{cpu_icon}{end_nerdfont}{end_colorize} user {cpu_info["user"]}%, sys {cpu_info["sys"]}%, idle {cpu_info["idle"]}%'
+        cpu_usage = f'{util.colorize(cpu_icon)} user {cpu_info["user"]}%, sys {cpu_info["sys"]}%, idle {cpu_info["idle"]}%'
     else:
-        cpu_usage = f'{start_colorize}{start_nerdfont}{cpu_icon}{end_nerdfont}{end_colorize} {cpu_info["error"]}'
+        cpu_usage = f'{util.colorize(cpu_icon)} {cpu_info["error"]}'
 
     print(cpu_usage)
 

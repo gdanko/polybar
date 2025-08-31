@@ -9,6 +9,18 @@ import os
 import sys
 import urllib.request
 
+def sanitize_config(config):
+    if not 'locations' in config:
+        config['locations'] = ['Los Angeles, CA, US']
+    else:
+        if len(config['locations']) == 0:
+            config['locations'] = ['Los Angeles, CA, US']
+
+    if not 'use_celsius' in config:
+        config['use_celsius'] = True
+    
+    return config
+
 def get_weather_icon(condition_code, is_day):
     if condition_code == 1000:
         if is_day == 1:
@@ -54,75 +66,73 @@ def get_weather_icon(condition_code, is_day):
 
     return '\uf185' # md_weather_sunny
 
-def get_weather(api_key, locations, days, use_celsius):
-    start_colorize = '%{F#F0C674}'
-    end_colorize = '%{F-}'
-    start_nerdfont = '%{T3}'
-    end_nerdfont = '%{T-}'
+def get_weather_data(config):
+    output = {
+        'locations': {},
+    }
 
-    url_parts = (
-        'https',
-        'api.weatherapi.com',
-        f'v1/forecast.json?key={api_key}&q={quote(locations[0])}&days={days}&aqi=yes&alerts=yes',
-        '',
-        '',
-        '',
-    )
-    url = urlunparse(url_parts)
+    api_key = config['api_key']
+    locations = config['locations']
+    use_celsius = config['use_celsius']
 
-    with urllib.request.urlopen(url) as response:
-        body = response.read().decode('utf-8')
-        if response.status == 200:
-            try:
-                weather_data = json.loads(body)
-            except:
-                return "Weather data unavailable"
-            
-            condition_code = weather_data['current']['condition']['code']
-            is_day = weather_data['current']['is_day']
-            icon = get_weather_icon(condition_code, is_day)
-            location = weather_data['location']['name']
+    for location in locations:
+        url_parts = (
+            'https',
+            'api.weatherapi.com',
+            f'v1/forecast.json?key={api_key}&q={quote(location)}&aqi=no&alerts=no',
+            '',
+            '',
+            '',
+        )
+        url = urlunparse(url_parts)
 
-            if use_celsius:
-                current_temp = weather_data['current']['temp_c']
-                unit = 'C'
-            else:
-                current_temp = weather_data['current']['temp_f']
-                unit = 'F'
-            
-            weather = f'{start_colorize}{start_nerdfont}{icon}{end_nerdfont}{end_colorize} {location} {current_temp}°{unit}'
-            return weather
+        with urllib.request.urlopen(url) as response:
+            body = response.read().decode('utf-8')
+            if response.status == 200:
+                weather_data, err = util.parse_json_string(body)
 
-        else:
-            return "Weather data unavailable"
+                if not location in output['locations']:
+                    output['locations'][location] = {}
+
+
+                if err:
+                    output['locations'][location]['error'] = f'could not retrieve the weather for {location}: {err}'
+                else:
+                    output['locations'][location]['location'] = weather_data['location']['name']
+                    output['locations'][location]['condition_code'] = weather_data['current']['condition']['code']
+                    output['locations'][location]['icon'] = get_weather_icon(
+                        weather_data['current']['condition']['code'],
+                        weather_data['current']['is_day'],
+                    )
+
+                    if use_celsius:
+                        output['locations'][location]['current_temp'] = weather_data['current']['temp_c']
+                        output['locations'][location]['unit'] = 'C'
+                    else:
+                        output['locations'][location]['current_temp'] = weather_data['current']['temp_f']
+                        output['locations'][location]['unit'] = 'F'
+
+    return output
 
 def main():
-    start_colorize = '%{F#F0C674}'
-    end_colorize = '%{F-}'
-    start_nerdfont = '%{T3}'
-    end_nerdfont = '%{T-}'
-
     config_file = util.get_config_file_path('weather.json')
     config, err = util.parse_config_file(filename=config_file, required_keys=['api_key'])
     if err != '':
         print(f'Weather: {err}')
         sys.exit(1)
 
-    # Set defaults if the config is missing values
-    if not 'locations' in config:
-        config['locations'] = ['Los Angeles, CA, US']
-    else:
-        if len(config['locations']) == 0:
-            config['locations'] = ['Los Angeles, CA, US']
+    config = sanitize_config(config)
+    weather_data = get_weather_data(config)
 
-    if not 'days' in config:
-        config['days'] = 2
+    output = []
+    if len(weather_data['locations']) > 0:
+        for location, location_data in weather_data['locations'].items():
+            current_temp = location_data['current_temp']
+            unit = location_data['unit']
+            icon = location_data['icon']
+            output.append(f'{util.colorize(icon)} {location} {current_temp}°{unit}')
 
-    if not 'use_celsius' in config:
-        config['use_celsius'] = True
-
-    weather_string = get_weather(config['api_key'], config['locations'], config['days'], config['use_celsius'])
-    print(weather_string)
+    print(' | '.join(output))
     sys.exit(0)
 
 if __name__ == '__main__':

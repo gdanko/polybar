@@ -53,11 +53,6 @@ def get_disk_usage(mountpoints: list) -> list:
     return filesystems
 
 def main():
-    start_colorize = '%{F#F0C674}'
-    end_colorize = '%{F-}'
-    start_nerdfont = '%{T3}'
-    end_nerdfont = '%{T-}'
-
     config_file = util.get_config_file_path('disk-usage.json')
     config, err = util.parse_config_file(filename=config_file, required_keys=['filesystems'])
     if err != '':
@@ -86,9 +81,9 @@ def main():
     output = []
     for filesystem in disk_info:
         if filesystem['success']:
-            filesystem_usage = f'{start_colorize}{start_nerdfont}{disk_icon}{end_nerdfont} {filesystem["mountpoint"]}{end_colorize} {util.byte_converter(number=filesystem["used"], unit=args.unit)} / {util.byte_converter(number=filesystem["total"], unit=args.unit)}'
+            filesystem_usage = f'{util.colorize(disk_icon)} {filesystem["mountpoint"]} {util.byte_converter(number=filesystem["used"], unit=args.unit)} / {util.byte_converter(number=filesystem["total"], unit=args.unit)}'
         else:
-            filesystem_usage = f'{start_colorize}{start_nerdfont}{disk_icon}{end_nerdfont} {filesystem["mountpoint"]}{end_colorize} {filesystem["error"]}'
+            filesystem_usage = f'{util.colorize(disk_icon)} {filesystem["mountpoint"]} {filesystem["error"]}'
         output.append(filesystem_usage)
 
     print(' | '.join(output))

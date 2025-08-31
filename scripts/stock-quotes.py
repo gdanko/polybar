@@ -18,8 +18,6 @@ def get_stock_quotes(symbols):
         'symbols': {},
     }
 
-
-
     url_parts = (
         'https',
         'query1.finance.yahoo.com',
@@ -75,10 +73,6 @@ def get_stock_quotes(symbols):
     return data
 
 def main():
-    start_colorize = '%{F#F0C674}'
-    end_colorize = '%{F-}'
-    start_nerdfont = '%{T3}'
-    end_nerdfont = '%{T-}'
     arrow_down = util.surrogatepass('\uea9d') # cod_arrow_small_down
     arrow_up = util.surrogatepass('\ueaa0') # cod_arrow_small_up
     graph_icon = util.surrogatepass('\uebe2') # cod_graph_line
@@ -121,7 +115,7 @@ def main():
                 arrow = arrow_down
                 change_amount = f'{util.pad_float((float(last - price)))}'
                 pct_change = f'{util.pad_float((last - price) / last * 100)}'
-            output.append(f'{start_colorize}{start_nerdfont}{graph_icon}{end_nerdfont}{end_colorize} {symbol} ${price} {arrow}${change_amount} ({pct_change}%)')
+            output.append(f'{util.colorize(graph_icon)} {symbol} ${price} {arrow}${change_amount} ({pct_change}%)')
 
     print(' | '.join(output))
 
