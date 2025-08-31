@@ -36,11 +36,18 @@ def get_disk_usage(mountpoints: list) -> list:
                     'error':       f'no output from df -B 1 {mountpoint}'
                 }
         else:
-            filesystem_dict = {
-                'success':     False,
-                'mountpoint':  mountpoint,
-                'error':       'non-0 exit code'
-            }
+            if stderr != '':
+                filesystem_dict = {
+                    'success':     False,
+                    'mountpoint':  mountpoint,
+                    'error':       stderr.strip(),
+                }
+            else:
+                filesystem_dict = {
+                    'success':     False,
+                    'mountpoint':  mountpoint,
+                    'error':       'non-zero exit code'
+                }
         filesystems.append(filesystem_dict)
 
     return filesystems
@@ -69,7 +76,7 @@ def main():
     else:
         if len(config['filesystems']) == 0:
             print('Disk Usage: No mountpoints defined')
-            sys.exit(0)
+            sys.exit(1)
         else:
             mountpoints = config['filesystems']
     
@@ -80,7 +87,7 @@ def main():
         if filesystem['success']:
             filesystem_usage = f'{start_colorize}{start_nerdfont}{disk_icon}{end_nerdfont} {filesystem["mountpoint"]}{end_colorize} {util.byte_converter(number=filesystem["used"], unit=args.unit)} / {util.byte_converter(number=filesystem["total"], unit=args.unit)}'
         else:
-            filesystem_usage = f'{start_colorize}{start_nerdfont}{disk_icon}{end_nerdfont} {args.mount}{end_colorize} {disk_info["error"]}'
+            filesystem_usage = f'{start_colorize}{start_nerdfont}{disk_icon}{end_nerdfont} {filesystem["mountpoint"]}{end_colorize} {filesystem["error"]}'
         output.append(filesystem_usage)
 
     print(' | '.join(output))
