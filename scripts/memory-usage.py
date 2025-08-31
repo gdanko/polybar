@@ -29,10 +29,16 @@ def get_memory_usage():
                 'error':   'no output from free'
             }
     else:
-        mem_dict = {
-            'success': False,
-            'error':   'non-0 exit code'
-        }
+        if stderr != '':
+            mem_dict = {
+                'success': False,
+                'error':   stderr.strip(),
+            }
+        else:
+            mem_dict = {
+                'success': False,
+                'error':   'non-zero exit code'
+            }
 
     return mem_dict
 
