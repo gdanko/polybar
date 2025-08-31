@@ -75,12 +75,6 @@ def get_stock_quotes(symbols):
     return data
 
 def main():
-    config_file = util.get_config_file_path('stock-quotes.json')
-    config, err = util.parse_config_file(config_file)
-    if err != '':
-        print(f'Disk Usage: {err}')
-        sys.exit(1)
-    
     start_colorize = '%{F#F0C674}'
     end_colorize = '%{F-}'
     start_nerdfont = '%{T3}'
@@ -88,20 +82,29 @@ def main():
     arrow_down = util.surrogatepass('\uea9d') # cod_arrow_small_down
     arrow_up = util.surrogatepass('\ueaa0') # cod_arrow_small_up
     graph_icon = util.surrogatepass('\uebe2') # cod_graph_line
+    max_symbols = 5
 
-    parser = argparse.ArgumentParser(description="Get disk info from df(1)")
-    parser.add_argument("-s", "--symbol", action='append', help="The sumbol to lookup; can be used multiple times", required=False)
+    config_file = util.get_config_file_path('stock-quotes.json')
+    config, err = util.parse_config_file(filename=config_file, required_keys=['symbols'])
+    if err != '':
+        print(f'Disk Usage: {err}')
+        sys.exit(1)
+
+    # Set defaults if the config is missing values
+    if not 'symbols' in config or ('symbols' in config and len(config['symbols']) == 0):
+        config['symbols'] = ['AAPL', 'GOOG', 'MSFT']
+
+    parser = argparse.ArgumentParser(description="Look stock quotes up from Yahoo! Finance")
+    parser.add_argument("-s", "--symbol", action='append', help="The symbol to lookup; can be used multiple times", required=False)
     args = parser.parse_args()
 
     # Determine the symbols to check
     if args.symbol:
         symbols = args.symbol
     else:
-        if len(config['symbols']) == 0:
-            print('Stock Quotes: No symbols defined')
-            sys.exit(1)
-        else:
-            symbols = config['symbols']
+        if len(config['symbols']) > 5:
+            config['symbols'] = config['symbols'][:max_symbols]
+        symbols = config['symbols']
     
     quotes = get_stock_quotes(symbols)
 
