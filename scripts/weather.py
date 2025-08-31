@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-from polybar import util
+from polybar import glyphs, util
 from urllib.parse import quote, urlunparse
 from urllib.request import urlopen, Request
 import json
@@ -22,49 +22,86 @@ def sanitize_config(config):
     return config
 
 def get_weather_icon(condition_code, is_day):
-    if condition_code == 1000:
+    # https://www.weatherapi.com/docs/weather_conditions.json
+    if condition_code == 1000: # Sunny
         if is_day == 1:
-            return '\uf185' # md_weather_sunny
+            return glyphs.md_weather_sunny
         else:
-            return util.surrogatepass('\udb81\udd94') # md_weather_night
+            return glyphs.md_weather_night
 
     elif condition_code == 1003:
-        if is_day == 1:
-            return util.surrogatepass('\udb81\udd95') # md_weather_partly_cloudy
+        if is_day == 1: # Partly cloudy
+            return glyphs.md_weather_partly_cloudy
         else:
-            return util.surrogatepass('\udb83\udf31') # md_weather_night_partly_cloudy
+            return glyphs.md_weather_night_partly_cloudy
 
-    elif condition_code == 1006:
+    elif condition_code == 1006: # Cloudy
         if is_day == 1:
-            return util.surrogatepass('\udb81\udd90') # md_weather_cloudy
+            return glyphs.weather_day_cloudy
         else:
-            return util.surrogatepass('\udb83\udf31') # md_weather_cloudy
+            return glyphs.weather_night_cloudy
 
     elif condition_code == 1009: # Overcast
         if is_day == 1:
-            return util.surrogatepass('\ue30c') # weather_day_sunny_overcast
+            return glyphs.weather_day_sunny_overcast
         else:
-            return util.surrogatepass('\ue30c') # weather_day_sunny_overcast
+            return glyphs.weather_night_cloudy
 
     elif condition_code == 1030: # Mist
         if is_day == 1:
-            return util.surrogatepass('\udb83\udf30') # md_weather_hazy
+            return glyphs.md_weather_hazy
         else:
-            return util.surrogatepass('\udb83\udf30') # md_weather_hazy
+            return glyphs.md_weather_hazy
 
     elif condition_code == 1063: # Patchy rain possible
         if is_day == 1:
-            return util.surrogatepass('\udb83\udf33') # md_weather_partly_rainy
+            return glyphs.md_weather_partly_rainy
         else:
-            return util.surrogatepass('\udb83\udf33') # md_weather_partly_rainy
+            return glyphs.md_weather_partly_rainy
 
     elif condition_code == 1066: # Patchy snow possible
         if is_day == 1:
-            return util.surrogatepass('\udb83\udf34') # md_weather_partly_snowy
+            return glyphs.md_weather_partly_snowy
         else:
-            return util.surrogatepass('\udb83\udf34') # md_weather_partly_snowy
+            return glyphs.md_weather_partly_snowy
 
-    return '\uf185' # md_weather_sunny
+    elif condition_code in [1066, 1204, 1249]: # Patchy sleet possible / Light sleet /Light sleet showers
+        if is_day == 1:
+            return glyphs.weather_day_sleet
+        else:
+            return glyphs.weather_night_sleet
+
+    elif condition_code in [1207, 1252]: # Moderate or heavy sleet / Moderate or heavy sleet showers
+        if is_day == 1:
+            return glyphs.weather_day_sleet_storm
+        else:
+            return glyphs.weather_night_alt_sleet_storm
+
+    elif condition_code in [1210, 1213, 1216, 1219, 1222, 1225] : # Patchy light snow / Light snow / Patchy moderate snow / Moderate snow / Patchy heavy snow / Heavy snow
+        if is_day == 1:
+            return glyphs.weather_day_snow
+        else:
+            return glyphs.weather_night_snow
+
+    elif condition_code == 1240: # Light rain shower
+        if is_day == 1:
+            return glyphs.weather_day_rain
+        else:
+            return glyphs.weather_night_rain
+
+    elif condition_code == 1243: # Moderate or heavy rain shower
+        if is_day == 1:
+            return glyphs.weather_day_showers
+        else:
+            return glyphs.weather_night_showers
+
+    elif condition_code == 1246: # Torrential rain shower
+        if is_day == 1:
+            return glyphs.weather_day_storm_showers
+        else:
+            return glyphs.weather_night_storm_showers
+
+    return glyphs.md_weather_sunny
 
 def get_weather_data(config):
     output = {
