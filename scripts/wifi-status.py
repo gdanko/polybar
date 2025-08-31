@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-from polybar import util
+from polybar import glyphs, util
 import argparse
 import os
 import re
@@ -13,17 +13,17 @@ def get_status_icon(signal):
     """
 
     if signal >= 30:
-        return util.surrogatepass('\udb82\udd28') # md_wifi_strength_4
+        return glyphs.md_wifi_strength_4
     elif signal >= -50:
-        return util.surrogatepass('\udb82\udd25') # md_wifi_strength_3
+        return glyphs.md_wifi_strength_3
     elif signal >= -60:
-        return util.surrogatepass('\udb82\udd22') # md_wifi_strength_2
+        return glyphs.md_wifi_strength_2
     elif signal >= -70:
-        return util.surrogatepass('\udb82\udd1f') # md_wifi_strength_1
+        return glyphs.md_wifi_strength_1
     elif signal >= -80:
-        return util.surrogatepass('\udb82\udd2f') # md_wifi_strength_outline
+        return glyphs.md_wifi_strength_outline
     elif signal >= -90:
-        return util.surrogatepass('\udb82\udd2b') # md_wifi_strength_alert_outline
+        return glyphs.md_wifi_strength_alert_outline
 
 def get_wifi_status(interfaces):
     """
@@ -109,7 +109,7 @@ def main():
             wifi_icon = get_status_icon(status["signal"])
             output.append(f'{util.colorize(wifi_icon)} {status["interface"]} {status["signal"]} dBm')
         else:
-            wifi_icon = util.surrogatepass('\udb82\udd2d')
+            wifi_icon = glyphs.md_wifi_strength_alert_outline
             output.append(f'{util.colorize(wifi_icon)} {status["interface"]} {status["error"]}')
     
     print(' | '.join(output))
