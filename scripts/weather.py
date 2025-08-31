@@ -71,7 +71,7 @@ def get_weather(api_key, locations, days, use_celsius):
     url = urlunparse(url_parts)
 
     with urllib.request.urlopen(url) as response:
-        body = response.read().decode("utf-8")
+        body = response.read().decode('utf-8')
         if response.status == 200:
             try:
                 weather_data = json.loads(body)
@@ -97,11 +97,29 @@ def get_weather(api_key, locations, days, use_celsius):
             return "Weather data unavailable"
 
 def main():
+    start_colorize = '%{F#F0C674}'
+    end_colorize = '%{F-}'
+    start_nerdfont = '%{T3}'
+    end_nerdfont = '%{T-}'
+
     config_file = util.get_config_file_path('weather.json')
-    config, err = util.parse_config_file(config_file)
+    config, err = util.parse_config_file(filename=config_file, required_keys=['api_key'])
     if err != '':
         print(f'Weather: {err}')
         sys.exit(1)
+
+    # Set defaults if the config is missing values
+    if not 'locations' in config:
+        config['locations'] = ['Los Angeles, CA, US']
+    else:
+        if len(config['locations']) == 0:
+            config['locations'] = ['Los Angeles, CA, US']
+
+    if not 'days' in config:
+        config['days'] = 2
+
+    if not 'use_celsius' in config:
+        config['use_celsius'] = True
 
     weather_string = get_weather(config['api_key'], config['locations'], config['days'], config['use_celsius'])
     print(weather_string)
