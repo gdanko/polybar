@@ -77,6 +77,7 @@ format-margin = 8pt
 tray-spacing = 16pt
 
 [filesystem-base]
+; valid tokens are: ^pct_total, ^pct_used, ^pct_free, ^total, ^used, ^free
 type = custom/script
 interval = 25
 env-format = "{^used / ^total}"
@@ -93,6 +94,7 @@ inherit = filesystem-base
 env-mountpoint = "/work"
 
 [module/memory]
+; valid tokens are: ^pct_total, ^pct_used, ^pct_free, ^total, ^used, ^free
 type = custom/script
 interval = 2
 ; env-format = "{^pct_used of ^total used}"
