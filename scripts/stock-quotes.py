@@ -78,29 +78,11 @@ def main():
     graph_icon = util.surrogatepass('\uebe2') # cod_graph_line
     max_symbols = 5
 
-    config_file = util.get_config_file_path('stock-quotes.json')
-    config, err = util.parse_config_file(filename=config_file, required_keys=['symbols'])
-    if err != '':
-        print(f'Disk Usage: {err}')
-        sys.exit(1)
-
-    # Set defaults if the config is missing values
-    if not 'symbols' in config or ('symbols' in config and len(config['symbols']) == 0):
-        config['symbols'] = ['AAPL', 'GOOG', 'MSFT']
-
     parser = argparse.ArgumentParser(description="Look stock quotes up from Yahoo! Finance")
-    parser.add_argument("-s", "--symbol", action='append', help="The symbol to lookup; can be used multiple times", required=False)
+    parser.add_argument("-s", "--symbol", action='append', help="The symbol to lookup; can be used multiple times", required=True)
     args = parser.parse_args()
-
-    # Determine the symbols to check
-    if args.symbol:
-        symbols = args.symbol
-    else:
-        if len(config['symbols']) > 5:
-            config['symbols'] = config['symbols'][:max_symbols]
-        symbols = config['symbols']
     
-    quotes = get_stock_quotes(symbols)
+    quotes = get_stock_quotes(args.symbol)
 
     output = []
     for symbol, quote in quotes['symbols'].items():

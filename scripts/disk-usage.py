@@ -53,30 +53,14 @@ def get_disk_usage(mountpoints: list) -> list:
     return filesystems
 
 def main():
-    config_file = util.get_config_file_path('disk-usage.json')
-    config, err = util.parse_config_file(filename=config_file, required_keys=['filesystems'])
-    if err != '':
-        print(f'{start_colorize}Disk Usage{end_colorize}: {err}')
-        sys.exit(1)
-
     disk_icon = util.surrogatepass('\udb80\udeca')
 
     parser = argparse.ArgumentParser(description="Get disk info from df(1)")
-    parser.add_argument("-m", "--mount", action='append', help="The mountpoint to check; can be used multiple times", required=False)
+    parser.add_argument("-m", "--mountpoint", action='append', help="The mountpoint to check; can be used multiple times", required=True)
     parser.add_argument("-u", "--unit", help="The unit to use for display", choices=util.get_valid_units(), required=False)
     args = parser.parse_args()
-
-    # Determine the filesystems to measure
-    if args.mount:
-        mountpoints = args.mount
-    else:
-        if len(config['filesystems']) == 0:
-            print('Disk Usage: No mountpoints defined')
-            sys.exit(1)
-        else:
-            mountpoints = config['filesystems']
     
-    disk_info = get_disk_usage(mountpoints)
+    disk_info = get_disk_usage(args.mountpoint)
 
     output = []
     for filesystem in disk_info:

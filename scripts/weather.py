@@ -4,22 +4,9 @@ from pathlib import Path
 from polybar import glyphs, util
 from urllib.parse import quote, urlunparse
 from urllib.request import urlopen, Request
-import json
-import os
+import argparse
 import sys
 import urllib.request
-
-def sanitize_config(config):
-    if not 'locations' in config:
-        config['locations'] = ['Los Angeles, CA, US']
-    else:
-        if len(config['locations']) == 0:
-            config['locations'] = ['Los Angeles, CA, US']
-
-    if not 'use_celsius' in config:
-        config['use_celsius'] = True
-    
-    return config
 
 def get_weather_icon(condition_code, is_day):
     # https://www.weatherapi.com/docs/weather_conditions.json
@@ -109,14 +96,10 @@ def get_weather_icon(condition_code, is_day):
 
     return glyphs.md_weather_sunny
 
-def get_weather_data(config):
+def get_weather_data(api_key, locations, use_celsius):
     output = {
         'locations': {},
     }
-
-    api_key = config['api_key']
-    locations = config['locations']
-    use_celsius = config['use_celsius']
 
     for location in locations:
         url_parts = (
@@ -133,10 +116,10 @@ def get_weather_data(config):
             body = response.read().decode('utf-8')
             if response.status == 200:
                 weather_data, err = util.parse_json_string(body)
-
+                # util.pprint(weather_data)
+                # exit()
                 if not location in output['locations']:
                     output['locations'][location] = {}
-
 
                 if err:
                     output['locations'][location]['error'] = f'could not retrieve the weather for {location}: {err}'
@@ -150,30 +133,36 @@ def get_weather_data(config):
 
                     if use_celsius:
                         output['locations'][location]['current_temp'] = weather_data['current']['temp_c']
+                        output['locations'][location]['todays_high'] = weather_data['forecast']['forecastday'][0]['day']['maxtemp_c']
+                        output['locations'][location]['todays_low'] = weather_data['forecast']['forecastday'][0]['day']['mintemp_c']
                         output['locations'][location]['unit'] = 'C'
                     else:
                         output['locations'][location]['current_temp'] = weather_data['current']['temp_f']
+                        output['locations'][location]['todays_high'] = weather_data['forecast']['forecastday'][0]['day']['maxtemp_f']
+                        output['locations'][location]['todays_low'] = weather_data['forecast']['forecastday'][0]['day']['mintemp_f']
                         output['locations'][location]['unit'] = 'F'
 
     return output
 
 def main():
-    config_file = util.get_config_file_path('weather.json')
-    config, err = util.parse_config_file(filename=config_file, required_keys=['api_key'])
-    if err != '':
-        print(f'Weather: {err}')
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Get weather info from World Weather API")
+    parser.add_argument("-a", "--api-key", help="World Weather API key", required=True)
+    parser.add_argument("-l", "--location", action='append', help="The location to query; can be used multiple times", required=True)
+    parser.add_argument("-c", "--use-celsius", action='append', help="Use Celsius instead of Fahrenheit", required=False, default=False, type=bool)
+    args = parser.parse_args()
 
-    config = sanitize_config(config)
-    weather_data = get_weather_data(config)
+    locations = args.location if args.location else config['locations']
+    weather_data = get_weather_data(args.api_key, args.location, args.use_celsius)
 
     output = []
     if len(weather_data['locations']) > 0:
         for location, location_data in weather_data['locations'].items():
             current_temp = location_data['current_temp']
+            low_temp = location_data['todays_low']
+            high_temp = location_data['todays_high']
             unit = location_data['unit']
             icon = location_data['icon']
-            output.append(f'{util.colorize(icon)} {location} {current_temp}°{unit}')
+            output.append(f'{util.colorize(icon)} {location} {current_temp}°{unit} ({high_temp}°{unit}{glyphs.cod_arrow_small_up} {low_temp}°{unit}{glyphs.cod_arrow_small_down})')
 
     print(' | '.join(output))
     sys.exit(0)

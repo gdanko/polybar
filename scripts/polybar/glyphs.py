@@ -65,3 +65,7 @@ md_wifi_strength_lock_outline       = util.surrogatepass('\udb82\udd2c')
 md_wifi_strength_off                = util.surrogatepass('\udb82\udd2d')
 md_wifi_strength_off_outline        = util.surrogatepass('\udb82\udd2e')
 md_wifi_strength_outline            = util.surrogatepass('\udb82\udd2f')
+
+# Weather
+cod_arrow_small_down = util.surrogatepass('\uea9d')
+cod_arrow_small_up   = arrow_up = util.surrogatepass('\ueaa0')
