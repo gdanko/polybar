@@ -11,6 +11,15 @@ def get_disk_usage(mountpoint: str) -> list:
     Execute df -k against a mount point and return a dictionary with its values
     """
 
+    if util.is_binary_installed('findmnt'):
+        rc, stdout, stderr = util.run_piped_command(f'findmnt {mountpoint}')
+        if rc != 0:
+            return {
+                'success':     False,
+                'mountpoint':  mountpoint,
+                'error':       f'does not exist'
+            }  
+
     rc, stdout, stderr = util.run_piped_command(f'df -B 1 {mountpoint} | sed -n "2p"')
     if rc == 0:
         if stdout != '':
