@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from polybar import util
+from polybar import glyphs, util
 import platform
 import re
 import subprocess
@@ -33,6 +33,13 @@ def get_cpu_usage():
                     'gnice':   values[11],
                     'idle':    values[12]
                 }
+
+                if platform.machine() == 'x86':
+                    cpu_dict['icon'] = glyphs.md_cpu_32_bit
+                elif platform.machine() == 'x86_64':
+                    cpu_dict['icon'] = glyphs.md_cpu_64_bit
+                else:
+                    cpu_dict['icon'] = glyphs.oct_cpu
                 
             else:
                 cpu_dict = {
@@ -59,19 +66,12 @@ def get_cpu_usage():
     return cpu_dict
 
 def main():
-    if platform.machine() == 'x86':
-        cpu_icon = util.surrogatepass('\udb83\udedf')
-    elif platform.machine() == 'x86_64':
-        cpu_icon = util.surrogatepass('\udb83\udee0')
-    else:
-        cpu_icon = '\uf4bc'
-
     cpu_info = get_cpu_usage()
 
     if cpu_info['success']:
-        cpu_usage = f'{util.colorize(cpu_icon)} user {cpu_info["user"]}%, sys {cpu_info["sys"]}%, idle {cpu_info["idle"]}%'
+        cpu_usage = f'{util.colorize(cpu_info["icon"])} user {cpu_info["user"]}%, sys {cpu_info["sys"]}%, idle {cpu_info["idle"]}%'
     else:
-        cpu_usage = f'{util.colorize(cpu_icon)} {cpu_info["error"]}'
+        cpu_usage = f'{util.colorize(cpu_info["icon"])} {cpu_info["error"]}'
 
     print(cpu_usage)
 
