@@ -69,9 +69,9 @@ def main():
     disk_info = get_disk_usage(args.mountpoint)
 
     token_map = {
-        '^pct_total': f'{disk_info["pct_total"]}% total',
-        '^pct_used' : f'{disk_info["pct_used"]}% used',
-        '^pct_free': f'{disk_info["pct_free"]}% free',
+        '^pct_total': f'{disk_info["pct_total"]}%',
+        '^pct_used' : f'{disk_info["pct_used"]}%',
+        '^pct_free': f'{disk_info["pct_free"]}%',
         '^total': util.byte_converter(number=disk_info['total'], unit=args.unit),
         '^used': util.byte_converter(number=disk_info['used'], unit=args.unit),
         '^free': util.byte_converter(number=disk_info['free'], unit=args.unit),
@@ -97,7 +97,7 @@ def main():
             output = output.replace(token, token_map[token])
 
     if disk_info['success']:
-        filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {disk_info["mountpoint"]} {output}'
+        filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {util.color_title(disk_info["mountpoint"])} {output}'
     else:
         filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {util.color_error(disk_info["error"])}'
 
