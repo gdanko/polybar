@@ -84,17 +84,21 @@ exec = ~/.config/polybar/scripts/disk-usage-test.py --mountpoint "$mountpoint" -
 
 [module/filesystem-root]
 inherit = filesystem-base
+; env-format = "{^pct_used of ^total in use}"
 env-mountpoint = "/"
 
 [module/filesystem-work]
 inherit = filesystem-base
-env-format = "{^pct_used / ^pct_total}"
+; env-format = "{^pct_used / ^pct_total}"
 env-mountpoint = "/work"
 
 [module/memory]
 type = custom/script
 interval = 2
-exec = ~/.config/polybar/scripts/memory-usage.py
+; env-format = "{^pct_used of ^total used}"
+; env-format = "{^pct_used / ^pct_total}"
+env-format = "{^used / ^total}"
+exec = ~/.config/polybar/scripts/memory-usage-test.py --format "$format"
 
 [module/cpu]
 type = custom/script
