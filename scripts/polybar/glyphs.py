@@ -69,3 +69,15 @@ md_wifi_strength_outline            = util.surrogatepass('\udb82\udd2f')
 # Weather
 cod_arrow_small_down = util.surrogatepass('\uea9d')
 cod_arrow_small_up   = arrow_up = util.surrogatepass('\ueaa0')
+cod_graph_line       = util.surrogatepass('\uebe2')
+
+# CPU
+oct_cpu       = util.surrogatepass('\uf4bc')
+md_cpu_32_bit = util.surrogatepass('\udb83\udedf')
+md_cpu_64_bit = util.surrogatepass('\udb83\udee0')
+
+# Disk
+md_harddisk = util.surrogatepass('\udb80\udeca')
+
+# Memory
+md_memory = util.surrogatepass('\udb80\udf5b')
