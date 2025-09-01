@@ -61,7 +61,7 @@ font-2 = "Noto Sans:size=11;1"
 font-3 = "Arimo Nerd Font:size=14;2"
 
 modules-left = 
-modules-right = filesystem-root filesystem-work memory cpu network-throughput wlan weather-san-diego stocks-goog stocks-now
+modules-right = filesystem-root filesystem-work memory cpu network-throughput wlan-wlo1 weather-san-diego
 
 cursor-click = pointer
 cursor-scroll = ns-resize
@@ -79,16 +79,15 @@ tray-spacing = 16pt
 [filesystem-base]
 type = custom/script
 interval = 25
+exec = ~/.config/polybar/scripts/disk-usage.py --mountpoint "$mountpoint"
 
 [module/filesystem-root]
 inherit = filesystem-base
 env-mountpoint = "/"
-exec = ~/.config/polybar/scripts/disk-usage.py --mountpoint "$mountpoint"
 
 [module/filesystem-work]
 inherit = filesystem-base
 env-mountpoint = "/work"
-exec = ~/.config/polybar/scripts/disk-usage.py --mountpoint "$mountpoint"
 
 [module/memory]
 type = custom/script
@@ -113,34 +112,37 @@ interval = 2
 interface-type = wireless
 label-connected = %{F#F0C674}%ifname%%{F-} %downspeed% RX / %upspeed% TX
 
-[module/wlan]
+[wlan-base]
 type = custom/script
 interval = 2
-exec = ~/.config/polybar/scripts/wifi-status.py --interface wlo1
+exec = ~/.config/polybar/scripts/wifi-status.py --interface "$interface"
+
+[module/wlan-wlo1]
+inherit = wlan-base
+env-interface = "wlo1"
 
 [weather-base]
 type = custom/script
 interval = 900 ; 15m
 env-api_key = "<your_weather_api_key>"
+exec = ~/.config/polybar/scripts/weather.py --api-key "$api_key" --location "$location"
 
 [module/weather-san-diego]
 inherit = weather-base
 env-location = "San Diego, CA, US"
-exec = ~/.config/polybar/scripts/weather.py --api-key "$api_key" --location "$location"
 
 [stocks-base]
 type = custom/script
 interval = 900 ; 15m
+exec = ~/.config/polybar/scripts/stock-quotes.py --symbol "$symbol"
 
 [module/stocks-goog]
 inherit = stocks-base
 env-symbol = "GOOG"
-exec = ~/.config/polybar/scripts/stock-quotes.py --symbol "$symbol"
 
 [module/stocks-now]
 inherit = stocks-base
 env-symbol = "NOW"
-exec = ~/.config/polybar/scripts/stock-quotes.py --symbol "$symbol"
 
 [settings]
 screenchange-reload = true
