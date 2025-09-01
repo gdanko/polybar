@@ -87,7 +87,7 @@ def main():
             arrow = glyphs.cod_arrow_small_down
             change_amount = f'{util.pad_float((float(last - price)))}'
             pct_change = f'{util.pad_float((last - price) / last * 100)}'
-        print(f'{util.colorize(glyphs.cod_graph_line)} {args.symbol} ${price} {arrow}${change_amount} ({pct_change}%)')
+        print(f'{util.color_title(glyphs.cod_graph_line)} {args.symbol} ${price} {arrow}${change_amount} ({pct_change}%)')
     else:
         sys.exit(1)
 

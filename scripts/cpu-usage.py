@@ -69,9 +69,9 @@ def main():
     cpu_info = get_cpu_usage()
 
     if cpu_info['success']:
-        cpu_usage = f'{util.colorize(cpu_info["icon"])} user {cpu_info["user"]}%, sys {cpu_info["sys"]}%, idle {cpu_info["idle"]}%'
+        cpu_usage = f'{util.color_title(cpu_info["icon"])} user {cpu_info["user"]}%, sys {cpu_info["sys"]}%, idle {cpu_info["idle"]}%'
     else:
-        cpu_usage = f'{util.colorize(cpu_info["icon"])} {cpu_info["error"]}'
+        cpu_usage = f'{util.color_title(cpu_info["icon"])} {cpu_info["error"]}'
 
     print(cpu_usage)
 

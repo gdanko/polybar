@@ -134,7 +134,7 @@ def parse_json_string(input: str=''):
     except Exception as err:
         return None, err, 
 
-def colorize(text: str='') -> str:
-    start_colorize = '%{F#F0C674}'
-    end_colorize = '%{F-}'
-    return f'{start_colorize}{text}{end_colorize}'
+def color_title(text: str='') -> str:
+    start_color_title = '%{F#F0C674}'
+    end_color_title = '%{F-}'
+    return f'{start_color_title}{text}{end_color_title}'

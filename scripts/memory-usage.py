@@ -50,9 +50,9 @@ def main():
     memory_info = get_memory_usage()
 
     if memory_info['success']:
-        memory_usage = f'{util.colorize(glyphs.md_memory)} {util.byte_converter(memory_info["used"], unit=args.unit)} / {util.byte_converter(memory_info["total"], unit=args.unit)}'
+        memory_usage = f'{util.color_title(glyphs.md_memory)} {util.byte_converter(memory_info["used"], unit=args.unit)} / {util.byte_converter(memory_info["total"], unit=args.unit)}'
     else:
-        memory_usage = f'{util.colorize(glyphs.md_memory)} {memory_info['error']}'
+        memory_usage = f'{util.color_title(glyphs.md_memory)} {memory_info['error']}'
 
     print(memory_usage)
 

@@ -159,7 +159,7 @@ def main():
             high_temp = location_data['todays_high']
             unit = location_data['unit']
             icon = location_data['icon']
-            output.append(f'{util.colorize(icon)} {location} {current_temp}°{unit} ({high_temp}°{unit}{glyphs.cod_arrow_small_up} {low_temp}°{unit}{glyphs.cod_arrow_small_down})')
+            output.append(f'{util.color_title(icon)} {location} {current_temp}°{unit} ({high_temp}°{unit}{glyphs.cod_arrow_small_up} {low_temp}°{unit}{glyphs.cod_arrow_small_down})')
 
     print(' | '.join(output))
     sys.exit(0)

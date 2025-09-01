@@ -107,10 +107,10 @@ def main():
     for status in wifi_statuses:
         if status['success']:
             wifi_icon = get_status_icon(status["signal"])
-            output.append(f'{util.colorize(wifi_icon)} {status["interface"]} {status["signal"]} dBm')
+            output.append(f'{util.color_title(wifi_icon)} {status["interface"]} {status["signal"]} dBm')
         else:
             wifi_icon = glyphs.md_wifi_strength_alert_outline
-            output.append(f'{util.colorize(wifi_icon)} {status["interface"]} {status["error"]}')
+            output.append(f'{util.color_title(wifi_icon)} {status["interface"]} {status["error"]}')
     
     print(' | '.join(output))
 
