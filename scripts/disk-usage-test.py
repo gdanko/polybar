@@ -16,7 +16,7 @@ def get_disk_usage(mountpoint: str) -> list:
             return {
                 'success':     False,
                 'mountpoint':  mountpoint,
-                'error':       f'{mountpoint} does not exist'
+                'error':       f'{mountpoint} is an invalid mountpoint'
             }  
 
     rc, stdout, stderr = util.run_piped_command(f'df -B 1 {mountpoint} | sed -n "2p"')
