@@ -6,3 +6,6 @@ scripts/*.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 polybar/__pycache__/
+
+# My personal config.ini
+config.ini
