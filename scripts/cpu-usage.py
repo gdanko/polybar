@@ -60,7 +60,7 @@ def get_cpu_usage():
     else:
         cpu_dict = {
             'success':     False,
-            'error':       f'please install {binary}'
+            'error':       f'please install the sysstat package'
         }  
 
     return cpu_dict
