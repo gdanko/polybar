@@ -3,6 +3,7 @@
 from polybar import glyphs, util
 import argparse
 import re
+import sys
 
 def get_memory_usage():
     """
@@ -24,8 +25,10 @@ def get_memory_usage():
                 'available' : int(values[7]),
                 'pct_total' : 100,
             }
-            mem_dict['pct_used'] = round((mem_dict['used'] / mem_dict['total']) * 100)
-            mem_dict['pct_free'] = mem_dict['total'] - mem_dict['used']
+            # percent_used = (total - available) / total * 100
+            mem_dict['pct_used'] = round(((mem_dict['total'] - mem_dict['available']) / mem_dict['total']) * 100)
+            mem_dict['pct_free'] = mem_dict['pct_total'] - mem_dict['pct_used']
+            util.pprint(mem_dict)
 
         else:
             mem_dict = {
@@ -61,7 +64,7 @@ def main():
         '^pct_free': f'{memory_info["pct_free"]}%',
         '^total': util.byte_converter(number=memory_info['total'], unit=args.unit),
         '^used': util.byte_converter(number=memory_info['used'], unit=args.unit),
-        '^free': util.byte_converter(number=memory_info['free'], unit=args.unit),
+        '^free': util.byte_converter(number=memory_info['available'], unit=args.unit),
     }
 
     # For when the format is blank
@@ -70,17 +73,20 @@ def main():
 
     if args.format and args.format != '':
         output = args.format.replace('{','').replace('}', '')
+        valid = []
         invalid = []
         tokens = re.findall(r"\^\w+", args.format)
         for token in tokens:
-            if not token in valid_tokens:
+            if token in valid_tokens:
+                valid.append(token)
+            else:
                 invalid.append(token)
-        if len(invalid) > 0:
+        if len(invalid) > 0 or len(tokens) == 0:
             error = f'Invalid format: {args.format}'
             print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(error)}')
             sys.exit(1)
 
-        for idx, token in enumerate(tokens):
+        for idx, token in enumerate(valid):
             output = output.replace(token, token_map[token])
 
     if memory_info['success']:
