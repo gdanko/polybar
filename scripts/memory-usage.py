@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from polybar import util
+from polybar import glyphs, util
 import argparse
 import re
 
@@ -43,8 +43,6 @@ def get_memory_usage():
     return mem_dict
 
 def main():
-    memory_icon = util.surrogatepass('\udb80\udf5b') # md_memory
-
     parser = argparse.ArgumentParser(description="Get memory usage from free(1)")
     parser.add_argument("-u", "--unit", help="The unit to use for display", choices=util.get_valid_units(), required=False)
     args = parser.parse_args()
@@ -52,9 +50,9 @@ def main():
     memory_info = get_memory_usage()
 
     if memory_info['success']:
-        memory_usage = f'{util.colorize(memory_icon)} {util.byte_converter(memory_info["used"], unit=args.unit)} / {util.byte_converter(memory_info["total"], unit=args.unit)}'
+        memory_usage = f'{util.colorize(glyphs.md_memory)} {util.byte_converter(memory_info["used"], unit=args.unit)} / {util.byte_converter(memory_info["total"], unit=args.unit)}'
     else:
-        memory_usage = f'{util.colorize(memory_icon)} {memory_info['error']}'
+        memory_usage = f'{util.colorize(glyphs.md_memory)} {memory_info['error']}'
 
     print(memory_usage)
 
