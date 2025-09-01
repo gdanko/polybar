@@ -2,7 +2,6 @@
 
 from polybar import glyphs, util
 import argparse
-import os
 import re
 import sys
 
@@ -83,17 +82,20 @@ def main():
 
     if args.format and args.format != '':
         output = args.format.replace('{','').replace('}', '')
+        valid = []
         invalid = []
         tokens = re.findall(r"\^\w+", args.format)
         for token in tokens:
-            if not token in valid_tokens:
+            if token in valid_tokens:
+                valid.append(token)
+            else:
                 invalid.append(token)
-        if len(invalid) > 0:
+        if len(invalid) > 0 or len(valid) == 0:
             error = f'Invalid format: {args.format}'
             print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(error)}')
             sys.exit(1)
 
-        for idx, token in enumerate(tokens):
+        for idx, token in enumerate(valid):
             output = output.replace(token, token_map[token])
 
     if disk_info['success']:
