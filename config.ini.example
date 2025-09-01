@@ -61,7 +61,7 @@ font-2 = "Noto Sans:size=11;1"
 font-3 = "Arimo Nerd Font:size=14;2"
 
 modules-left = 
-modules-right = filesystem-root filesystem-work memory cpu network-throughput wlan weather-san-diego weather-coronado stocks-goog
+modules-right = filesystem-root filesystem-work memory cpu network-throughput wlan weather-san-diego stocks-goog stocks-now
 
 cursor-click = pointer
 cursor-scroll = ns-resize
@@ -121,16 +121,11 @@ exec = ~/.config/polybar/scripts/wifi-status.py --interface wlo1
 [weather-base]
 type = custom/script
 interval = 900 ; 15m
-env-api_key = "<world-weather-api-key>"
+env-api_key = "<your_weather_api_key>"
 
 [module/weather-san-diego]
 inherit = weather-base
 env-location = "San Diego, CA, US"
-exec = ~/.config/polybar/scripts/weather.py --api-key "$api_key" --location "$location"
-
-[module/weather-coronado]
-inherit = weather-base
-env-location = "Coronado, CA, US"
 exec = ~/.config/polybar/scripts/weather.py --api-key "$api_key" --location "$location"
 
 [stocks-base]
@@ -140,6 +135,11 @@ interval = 900 ; 15m
 [module/stocks-goog]
 inherit = stocks-base
 env-symbol = "GOOG"
+exec = ~/.config/polybar/scripts/stock-quotes.py --symbol "$symbol"
+
+[module/stocks-now]
+inherit = stocks-base
+env-symbol = "NOW"
 exec = ~/.config/polybar/scripts/stock-quotes.py --symbol "$symbol"
 
 [settings]
