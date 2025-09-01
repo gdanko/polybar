@@ -79,7 +79,8 @@ tray-spacing = 16pt
 [filesystem-base]
 type = custom/script
 interval = 25
-exec = ~/.config/polybar/scripts/disk-usage.py --mountpoint "$mountpoint"
+env-format = "{^used / ^total}"
+exec = ~/.config/polybar/scripts/disk-usage-test.py --mountpoint "$mountpoint" --format "$format"
 
 [module/filesystem-root]
 inherit = filesystem-base
@@ -87,6 +88,7 @@ env-mountpoint = "/"
 
 [module/filesystem-work]
 inherit = filesystem-base
+env-format = "{^pct_used / ^pct_total}"
 env-mountpoint = "/work"
 
 [module/memory]
