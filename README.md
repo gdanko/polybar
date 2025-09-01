@@ -53,7 +53,8 @@ This is how I have set up my `config.ini` to use these scripts
 type = custom/script
 interval = 25
 env-format = "{^used / ^total}"
-exec = ~/.config/polybar/scripts/disk-usage-test.py --mountpoint "$mountpoint" --format "$format"
+env-unit = "auto"
+exec = ~/.config/polybar/scripts/disk-usage-test.py --mountpoint "$mountpoint" --format "$format" --unit "$unit"
 
 [module/filesystem-root]
 inherit = filesystem-base
@@ -67,7 +68,8 @@ env-mountpoint = "/work"
 type = custom/script
 interval = 2
 env-format = "{^used / ^total}"
-exec = ~/.config/polybar/scripts/memory-usage-test.py --format "$format"
+env-unit = "auto"
+exec = ~/.config/polybar/scripts/memory-usage-test.py --format "$format" --unit "$unit"
 
 [module/cpu]
 type = custom/script
