@@ -9,3 +9,6 @@ polybar/__pycache__/
 
 # My personal config.ini
 config.ini
+
+# Ignore the config.ini.example generator
+scripts/generate-config-example.sh
