@@ -28,7 +28,6 @@ def get_memory_usage():
             # percent_used = (total - available) / total * 100
             mem_dict['pct_used'] = round(((mem_dict['total'] - mem_dict['available']) / mem_dict['total']) * 100)
             mem_dict['pct_free'] = mem_dict['pct_total'] - mem_dict['pct_used']
-            util.pprint(mem_dict)
 
         else:
             mem_dict = {
