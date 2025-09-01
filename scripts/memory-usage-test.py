@@ -57,36 +57,37 @@ def main():
 
     memory_info = get_memory_usage()
 
-    token_map = {
-        '^pct_total': f'{memory_info["pct_total"]}%',
-        '^pct_used' : f'{memory_info["pct_used"]}%',
-        '^pct_free': f'{memory_info["pct_free"]}%',
-        '^total': util.byte_converter(number=memory_info['total'], unit=args.unit),
-        '^used': util.byte_converter(number=memory_info['used'], unit=args.unit),
-        '^free': util.byte_converter(number=memory_info['available'], unit=args.unit),
-    }
+    if memory_info['success']:
+        token_map = {
+            '^pct_total': f'{memory_info["pct_total"]}%',
+            '^pct_used' : f'{memory_info["pct_used"]}%',
+            '^pct_free': f'{memory_info["pct_free"]}%',
+            '^total': util.byte_converter(number=memory_info['total'], unit=args.unit),
+            '^used': util.byte_converter(number=memory_info['used'], unit=args.unit),
+            '^free': util.byte_converter(number=memory_info['available'], unit=args.unit),
+        }
 
-    # For when the format is blank
-    if not args.format or args.format == '':
-        args.format = '{^used / ^total}'
+        # For when the format is blank
+        if not args.format or args.format == '':
+            args.format = '{^used / ^total}'
 
-    if args.format and args.format != '':
-        output = args.format.replace('{','').replace('}', '')
-        valid = []
-        invalid = []
-        tokens = re.findall(r"\^\w+", args.format)
-        for token in tokens:
-            if token in valid_tokens:
-                valid.append(token)
-            else:
-                invalid.append(token)
-        if len(invalid) > 0 or len(tokens) == 0:
-            error = f'Invalid format: {args.format}'
-            print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(error)}')
-            sys.exit(1)
+        if args.format and args.format != '':
+            output = args.format.replace('{','').replace('}', '')
+            valid = []
+            invalid = []
+            tokens = re.findall(r"\^\w+", args.format)
+            for token in tokens:
+                if token in valid_tokens:
+                    valid.append(token)
+                else:
+                    invalid.append(token)
+            if len(invalid) > 0 or len(tokens) == 0:
+                error = f'Invalid format: {args.format}'
+                print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(error)}')
+                sys.exit(1)
 
-        for idx, token in enumerate(valid):
-            output = output.replace(token, token_map[token])
+            for idx, token in enumerate(valid):
+                output = output.replace(token, token_map[token])
 
     if memory_info['success']:
         memory_usage = f'{util.color_title(glyphs.md_memory)} {output}'
