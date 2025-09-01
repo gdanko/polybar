@@ -12,3 +12,6 @@ config.ini
 
 # Ignore the config.ini.example generator
 scripts/generate-config-example.sh
+
+# Ignore my dummy.sh script
+dummy.sh
