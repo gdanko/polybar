@@ -1,27 +1,25 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-from polybar import util
+from polybar import glyphs, util
 from urllib.parse import urlunparse
 from urllib.request import urlopen, Request
 import argparse
 import json
-import os
-import re
 import sys
 import urllib.request
 
-def get_stock_quotes(symbols):
+def get_stock_quotes(symbol):
     data = {
-        'success': False,
-        'error':   None,
-        'symbols': {},
+        'success':     False,
+        'error':       None,
+        'symbol_data': {},
     }
 
     url_parts = (
         'https',
         'query1.finance.yahoo.com',
-        f'v7/finance/spark?symbols={','.join(symbols)}'
+        f'v7/finance/spark?symbols={symbol}'
         '',
         '',
         '',
@@ -56,13 +54,11 @@ def get_stock_quotes(symbols):
                 data['success'] = True
                 for block in json_data['spark']['result']:
                     symbol = block['symbol']
-                    if not symbol in data['symbols']:
-                        meta = block['response'][0]['meta']
-                        data['symbols'][symbol] = {}
-                        data['symbols'][symbol]['price'] = meta['regularMarketPrice']
-                        data['symbols'][symbol]['last'] = meta['previousClose']
-                        data['symbols'][symbol]['currency'] = meta['currency']
-                        data['symbols'][symbol]['symbol'] = meta['symbol']
+                    meta = block['response'][0]['meta']
+                    data['symbol_data']['price'] = meta['regularMarketPrice']
+                    data['symbol_data']['last'] = meta['previousClose']
+                    data['symbol_data']['currency'] = meta['currency']
+                    data['symbol_data']['symbol'] = meta['symbol']
             else:
                 data['error'] = 'no stock data found'
         else:
@@ -73,33 +69,27 @@ def get_stock_quotes(symbols):
     return data
 
 def main():
-    arrow_down = util.surrogatepass('\uea9d') # cod_arrow_small_down
-    arrow_up = util.surrogatepass('\ueaa0') # cod_arrow_small_up
-    graph_icon = util.surrogatepass('\uebe2') # cod_graph_line
-    max_symbols = 5
-
     parser = argparse.ArgumentParser(description="Look stock quotes up from Yahoo! Finance")
-    parser.add_argument("-s", "--symbol", action='append', help="The symbol to lookup; can be used multiple times", required=True)
+    parser.add_argument("-s", "--symbol", help="The symbol to lookup", required=True)
     args = parser.parse_args()
     
-    quotes = get_stock_quotes(args.symbol)
+    quote = get_stock_quotes(args.symbol)
 
-    output = []
-    for symbol, quote in quotes['symbols'].items():
-        if quote['price'] is not None and quote['last'] is not None:
-            price = quote['price']
-            last = quote['last']
-            if price > last:
-                arrow = arrow_up
-                change_amount = f'{util.pad_float((price - last))}'
-                pct_change = f'{util.pad_float((price - last) / last * 100)}'
-            else:
-                arrow = arrow_down
-                change_amount = f'{util.pad_float((float(last - price)))}'
-                pct_change = f'{util.pad_float((last - price) / last * 100)}'
-            output.append(f'{util.colorize(graph_icon)} {symbol} ${price} {arrow}${change_amount} ({pct_change}%)')
+    if quote['symbol_data']['price'] is not None and quote['symbol_data']['last'] is not None:
+        price = quote['symbol_data']['price']
+        last = quote['symbol_data']['last']
 
-    print(' | '.join(output))
+        if price > last:
+            arrow = glyphs.cod_arrow_small_up
+            change_amount = f'{util.pad_float((price - last))}'
+            pct_change = f'{util.pad_float((price - last) / last * 100)}'
+        else:
+            arrow = glyphs.cod_arrow_small_down
+            change_amount = f'{util.pad_float((float(last - price)))}'
+            pct_change = f'{util.pad_float((last - price) / last * 100)}'
+        print(f'{util.colorize(glyphs.cod_graph_line)} {args.symbol} ${price} {arrow}${change_amount} ({pct_change}%)')
+    else:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
