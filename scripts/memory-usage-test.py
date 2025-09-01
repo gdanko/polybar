@@ -64,7 +64,7 @@ def main():
             '^pct_free': f'{memory_info["pct_free"]}%',
             '^total': util.byte_converter(number=memory_info['total'], unit=args.unit),
             '^used': util.byte_converter(number=memory_info['used'], unit=args.unit),
-            '^free': util.byte_converter(number=memory_info['available'], unit=args.unit),
+            '^free': util.byte_converter(number=memory_info['free'], unit=args.unit),
         }
 
         # For when the format is blank
