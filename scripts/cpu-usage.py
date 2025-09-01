@@ -11,6 +11,13 @@ def get_cpu_usage():
     Execute mpstat'
     """
 
+    if platform.machine() == 'x86':
+        icon = glyphs.md_cpu_32_bit
+    elif platform.machine() == 'x86_64':
+        icon = glyphs.md_cpu_64_bit
+    else:
+        icon = glyphs.oct_cpu
+
     binary = 'mpstat'
 
     # make sure mpstat is installed
@@ -21,46 +28,44 @@ def get_cpu_usage():
                 values = re.split(r'\s+', stdout)
 
                 cpu_dict = {
-                    'success': True,
-                    'user':    values[3],
-                    'nice':    values[4],
-                    'sys':     values[5],
-                    'iowait':  values[6],
-                    'irq':     values[7],
-                    'soft':    values[8],
-                    'steal':   values[9],
-                    'guest':   values[10],
-                    'gnice':   values[11],
-                    'idle':    values[12]
+                    'success' : True,
+                    'icon'    : icon,
+                    'user'    : values[3],
+                    'nice'    : values[4],
+                    'sys'     : values[5],
+                    'iowait'  : values[6],
+                    'irq'     : values[7],
+                    'soft'    : values[8],
+                    'steal'   : values[9],
+                    'guest'   : values[10],
+                    'gnice'   : values[11],
+                    'idle'    : values[12]
                 }
 
-                if platform.machine() == 'x86':
-                    cpu_dict['icon'] = glyphs.md_cpu_32_bit
-                elif platform.machine() == 'x86_64':
-                    cpu_dict['icon'] = glyphs.md_cpu_64_bit
-                else:
-                    cpu_dict['icon'] = glyphs.oct_cpu
-                
             else:
                 cpu_dict = {
-                    'success':     False,
-                    'error':       f'no output from mpstat'
+                    'success': False,
+                    'error'  : f'no output from mpstat',
+                    'icon'   : icon,
                 }
         else:
             if stderr != '':
                 cpu_dict = {
-                    'success':     False,
-                    'error':       stderr.strip(),
+                    'success': False,
+                    'error'  : stderr.strip(),
+                    'icon'   : icon,
                 }
             else:
                 cpu_dict = {
-                    'success':     False,
-                    'error':       'non-zero exit code'
+                    'success': False,
+                    'error'  : 'non-zero exit code',
+                    'icon'   : icon,
                 }
     else:
         cpu_dict = {
-            'success':     False,
-            'error':       f'please install the sysstat package'
+            'success': False,
+            'error'  : f'please install the sysstat package',
+            'icon'   : icon,
         }  
 
     return cpu_dict
@@ -71,7 +76,7 @@ def main():
     if cpu_info['success']:
         cpu_usage = f'{util.color_title(cpu_info["icon"])} user {cpu_info["user"]}%, sys {cpu_info["sys"]}%, idle {cpu_info["idle"]}%'
     else:
-        cpu_usage = f'{util.color_title(cpu_info["icon"])} {cpu_info["error"]}'
+        cpu_usage = f'{util.color_title(cpu_info["icon"])} {util.color_error(cpu_info["error"])}'
 
     print(cpu_usage)
 

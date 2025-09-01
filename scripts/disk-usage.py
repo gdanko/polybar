@@ -17,7 +17,7 @@ def get_disk_usage(mountpoint: str) -> list:
             return {
                 'success':     False,
                 'mountpoint':  mountpoint,
-                'error':       f'does not exist'
+                'error':       f'{mountpoint} does not exist'
             }  
 
     rc, stdout, stderr = util.run_piped_command(f'df -B 1 {mountpoint} | sed -n "2p"')
@@ -25,33 +25,33 @@ def get_disk_usage(mountpoint: str) -> list:
         if stdout != '':
             values = re.split(r'\s+', stdout)
             filesystem_dict = {
-                'success':     True,
-                'mountpoint':  mountpoint,
-                'filesystem':  values[0],
-                'total':       int(values[1]),
-                'used':        int(values[2]),
-                'free':        int(values[3]),
+                'success'    : True,
+                'mountpoint' : mountpoint,
+                'filesystem' : values[0],
+                'total'      : int(values[1]),
+                'used'       : int(values[2]),
+                'free'       : int(values[3]),
                 'use_percent': values[4],
             }
             
         else:
             filesystem_dict = {
-                'success':     False,
-                'mountpoint':  mountpoint,
-                'error':       f'no output from df -B 1 {mountpoint}'
+                'success'   : False,
+                'mountpoint': mountpoint,
+                'error'     : f'{mountpoint} no output from df -B 1 {mountpoint}'
             }
     else:
         if stderr != '':
             filesystem_dict = {
-                'success':     False,
+                'success'   : False,
                 'mountpoint':  mountpoint,
-                'error':       stderr.strip(),
+                'error'     : f'{mountpoint} {stderr.strip()}',
             }
         else:
             filesystem_dict = {
-                'success':     False,
-                'mountpoint':  mountpoint,
-                'error':       'non-zero exit code'
+                'success'   : False,
+                'mountpoint': mountpoint,
+                'error'     : f'{mountpoint} non-zero exit code'
             }
 
     return filesystem_dict
@@ -67,7 +67,7 @@ def main():
     if disk_info['success']:
         filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {disk_info["mountpoint"]} {util.byte_converter(number=disk_info["used"], unit=args.unit)} / {util.byte_converter(number=disk_info["total"], unit=args.unit)}'
     else:
-        filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {disk_info["mountpoint"]} {disk_info["error"]}'
+        filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {util.color_error(disk_info["error"])}'
 
     print(filesystem_usage)
 

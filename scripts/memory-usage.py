@@ -14,30 +14,30 @@ def get_memory_usage():
         if stdout != '':
             values = re.split(r'\s+', stdout)
             mem_dict = {
-                'success':   True,
-                'total':     int(values[1]),
-                'used':      int(values[2]),
-                'free':      int(values[3]),
-                'shared':    int(values[4]),
-                'buffers':   int(values[5]),
-                'cache':     int(values[6]),
+                'success'  : True,
+                'total'    : int(values[1]),
+                'used'     : int(values[2]),
+                'free'     : int(values[3]),
+                'shared'   : int(values[4]),
+                'buffers'  : int(values[5]),
+                'cache'    : int(values[6]),
                 'available': int(values[7]),
             }
         else:
             mem_dict = {
                 'success': False,
-                'error':   'no output from free'
+                'error'  : 'no output from free'
             }
     else:
         if stderr != '':
             mem_dict = {
                 'success': False,
-                'error':   stderr.strip(),
+                'error'  : stderr.strip(),
             }
         else:
             mem_dict = {
                 'success': False,
-                'error':   'non-zero exit code'
+                'error'  : 'non-zero exit code'
             }
 
     return mem_dict
@@ -52,7 +52,7 @@ def main():
     if memory_info['success']:
         memory_usage = f'{util.color_title(glyphs.md_memory)} {util.byte_converter(memory_info["used"], unit=args.unit)} / {util.byte_converter(memory_info["total"], unit=args.unit)}'
     else:
-        memory_usage = f'{util.color_title(glyphs.md_memory)} {memory_info['error']}'
+        memory_usage = f'{util.color_title(glyphs.md_memory)} {util.color_error(memory_info['error'])}'
 
     print(memory_usage)
 
