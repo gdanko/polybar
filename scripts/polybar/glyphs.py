@@ -81,3 +81,12 @@ md_harddisk = util.surrogatepass('\udb80\udeca')
 
 # Memory
 md_memory = util.surrogatepass('\udb80\udf5b')
+
+# Speedtest
+md_speedometer_slow   = util.surrogatepass('\udb83\udf86')
+md_speedometer_medium = util.surrogatepass('\udb83\udf85')
+md_speedometer_fast   = util.surrogatepass('\udb81\udcc5')
+
+# Others
+cod_package        = util.surrogatepass('\ueb29')
+md_package_variant = util.surrogatepass('\udb80\udfd6')
