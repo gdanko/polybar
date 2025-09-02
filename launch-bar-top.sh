@@ -10,8 +10,7 @@ polybar-msg cmd quit
 # echo "---" | tee -a /tmp/polybar1.log /tmp/polybar2.log
 # polybar bar1 2>&1 | tee -a /tmp/polybar1.log & disown
 # polybar bar2 2>&1 | tee -a /tmp/polybar2.log & disown
-echo "---" | tee -a /tmp/polybar-gdanko.log
-polybar gdanko 2>&1 | tee -a /tmp/polybar-gdanko.log & disown
-
+echo "---" | tee -a /tmp/polybar-top.log
+polybar top 2>&1 | tee -a /tmp/polybar-top.log & disown
 
 echo "Bars launched..."
