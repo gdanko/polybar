@@ -13,5 +13,8 @@ config.ini
 # Ignore the config.ini.example generator
 scripts/generate-config-example.sh
 
-# Ignore my dummy.sh script
+# Test files
 dummy.sh
+config.ini.test
+menu-test.sh
+example.sh
