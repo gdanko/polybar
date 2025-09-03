@@ -69,8 +69,8 @@ def get_stock_quotes(symbol):
     return data
 
 def main():
-    parser = argparse.ArgumentParser(description="Look stock quotes up from Yahoo! Finance")
-    parser.add_argument("-s", "--symbol", help="The symbol to lookup", required=True)
+    parser = argparse.ArgumentParser(description='Look stock quotes up from Yahoo! Finance')
+    parser.add_argument('-s', '--symbol', help='The symbol to lookup', required=True)
     args = parser.parse_args()
     
     quote = get_stock_quotes(args.symbol)
