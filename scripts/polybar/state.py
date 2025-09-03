@@ -1,48 +1,37 @@
 import inspect
 import os
 
-def get_statefile_name():
-    """
-    Determine the filename of the calling script file and generate a statefile name.
-    """
-    caller_frame_info = inspect.stack()[3]
-    caller_filepath = caller_frame_info.filename
-    caller_filepath_basename = os.path.splitext(
-        os.path.basename(caller_filepath)
-    )[0]
-
-    return os.path.join(
-        '/tmp',
-        f'{os.path.basename(caller_filepath_basename)}-state'
-    )
-
-def read_state():
+def read_state(statefile_name: str=''):
     """
     Read state from file, default to 0 if missing or invalid.
     """
-    if os.path.exists(get_statefile_name()):
+    if os.path.exists(statefile_name):
         try:
-            with open(get_statefile_name(), "r") as f:
+            with open(statefile_name, "r") as f:
                 return int(f.read().strip())
         except ValueError:
+            write_state(statefile_name=statefile_name, state_number=0)
             return 0
+    write_state(statefile_name=statefile_name, state_number=0)
     return 0
 
-def write_state(state):
+def write_state(statefile_name: str='', state_number: int=0):
     """
     Write state to file.
     """
-    with open(get_statefile_name(), "w") as f:
-        f.write(str(state))
+    with open(statefile_name, 'w') as f:
+        f.write(str(state_number))
 
-def next_state(n, backward=False):
+def next_state(statefile_name: str='', mode_count: int=0, backward: bool=False):
     """
     Cycle through states 0..n-1 forward or backward.
     """
-    state = read_state()
+    state_number = read_state(statefile_name=statefile_name)
+
     if backward:
-        state = (state - 1) % n
+        state_number = (state_number - 1) % mode_count
     else:
-        state = (state + 1) % n
-    write_state(state)
-    return state
+        state_number = (state_number + 1) % mode_count
+
+    write_state(statefile_name=statefile_name, state_number=state_number)
+    return state_number
