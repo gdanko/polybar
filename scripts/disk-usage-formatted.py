@@ -32,7 +32,7 @@ def get_disk_usage(mountpoint: str) -> list:
                 'free'       : int(values[3]),
                 'pct_total'  : 100,
             }
-            filesystem_dict['pct_used'] = round ((filesystem_dict['used'] / (filesystem_dict['used'] + filesystem_dict['free'])) * 100)
+            filesystem_dict['pct_used'] = round((filesystem_dict['used'] / (filesystem_dict['used'] + filesystem_dict['free'])) * 100)
             filesystem_dict['pct_free'] = filesystem_dict['pct_total'] - filesystem_dict['pct_used']
 
         else:
