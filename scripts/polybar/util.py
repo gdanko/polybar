@@ -5,6 +5,7 @@ import json
 import os
 import shlex
 import shutil
+import socket
 import subprocess
 
 def pprint(input):
@@ -96,15 +97,13 @@ def byte_converter(number: int=0, unit: Optional[str] = None) -> str:
         prefix_map = {'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5, 'E': 6, 'Z': 7}
         return f'{pad_float(number / (divisor ** prefix_map[prefix]))} {unit}{suffix}'
 
-def greet(name: str = "World", excited: bool = False) -> str:
-    if excited:
-        return f"Hello, {name}!"
-    return f"Hello, {name}."
-
 def file_exists(filename: str='') -> bool:
     if os.path.exists(filename) and os.path.isfile(filename):
         return True
     return False
+
+def get_home_directory() -> str:
+    return Path.home()
 
 def get_config_directory() -> str:
     return os.path.join(
@@ -156,3 +155,14 @@ def color_error(text: str='') -> str:
     start_color_title = '%{F#F00}'
     end_color_title = '%{F-}'
     return f'{start_color_title}{text}{end_color_title}'
+
+def network_is_reachable():
+    host = '8.8.8.8'
+    port = 53
+    timeout = 3
+    try:
+        socket.setdefaulttimeout(timeout)
+        with socket.create_connection((host, port)):
+            return True
+    except OSError:
+        return False
