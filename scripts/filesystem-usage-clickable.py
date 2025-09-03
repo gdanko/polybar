@@ -2,7 +2,6 @@
 
 from polybar import glyphs, state, util
 import argparse
-import getpass
 import json
 import os
 import re
@@ -42,18 +41,21 @@ def get_statefile_name(mountpoint: str='') -> str:
     if uuid != '':
         statefile = os.path.basename(__file__)
         statefile_no_ext = os.path.splitext(statefile)[0]
-        return os.path.join('/tmp', f'{statefile_no_ext}-{uuid}-{getpass.getuser()}-state')
+        filename = os.path.join(util.get_home_directory(), f'.polybar-{statefile_no_ext}-{uuid}-state')
+        return filename
     else:
         mountpoint = mountpoint.replace('/', '_slash') if mountpoint.endswith('/') else mountpoint.replace('/', '_slash_')
         statefile = os.path.basename(__file__)
         statefile_no_ext = os.path.splitext(statefile)[0]
-        return os.path.join('/tmp', f'{statefile_no_ext}{mountpoint}-{getpass.getuser()}-state')
+        filename = os.path.join(util.get_home_directory(), f'.polybar-{statefile_no_ext}{mountpoint}-state')
+        return filename
 
 def generate_toggle_script(args):
-    with open(args.toggle_script, 'w') as f:
+    toggle_script = os.path.expanduser(args.toggle_script)
+    with open(toggle_script, 'w') as f:
         f.write('#/bin/sh\n')
         f.write(f'{f'{os.path.join(util.get_config_directory(), os.path.basename(__file__))}'} --mountpoint "{args.mountpoint}" --unit "{args.unit}" --toggle\n')
-    os.chmod(args.toggle_script, 0o755)
+    os.chmod(toggle_script, 0o755)
 
 def get_disk_usage(mountpoint: str) -> list:
     """
@@ -109,11 +111,11 @@ def get_disk_usage(mountpoint: str) -> list:
 
 def main():
     mode_count = 3
-    parser = argparse.ArgumentParser(description="Get disk info from df(1)")
-    parser.add_argument("-m", "--mountpoint", help="The mountpoint to check", required=True)
-    parser.add_argument("-u", "--unit", help="The unit to use for display", choices=util.get_valid_units(), required=False)
-    parser.add_argument('-t', '--toggle', action="store_true", help='Toggle the output format', required=False)
-    parser.add_argument('-s', '--toggle-script', help='Filename of the "click-left" toggle script, e.g., /tmp/toggle-{username}-{mountpoint}.sh', required=False)
+    parser = argparse.ArgumentParser(description='Get disk info from df(1)')
+    parser.add_argument('-m', '--mountpoint', help='The mountpoint to check', required=True)
+    parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
+    parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
+    parser.add_argument('-s', '--toggle-script', help='Filename of the 'click-left' toggle script, e.g., /tmp/toggle-{username}-{mountpoint}.sh', required=False)
     args = parser.parse_args()
 
     statefile_name = get_statefile_name(mountpoint=args.mountpoint)

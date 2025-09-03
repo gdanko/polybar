@@ -62,7 +62,7 @@ def main():
     parser = argparse.ArgumentParser(description='Get disk info from df(1)')
     parser.add_argument('-m', '--mountpoint', help='The mountpoint to check', required=True)
     parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
-    parser.add_argument('-f', '--format', help=f'Output format, e.g., {{^free / ^total}}; valid tokens are: {",".join(valid_tokens)} ', required=False, default='{^free / ^total}')
+    parser.add_argument('-f', '--format', help=f'Output format, e.g., {{^free / ^total}}; valid tokens are: {', '.join(valid_tokens)} ', required=False, default='{^free / ^total}')
     args = parser.parse_args()
     
     disk_info = get_disk_usage(args.mountpoint)

@@ -59,9 +59,9 @@ def get_disk_usage(mountpoint: str) -> list:
     return filesystem_dict
 
 def main():
-    parser = argparse.ArgumentParser(description="Get disk info from df(1)")
-    parser.add_argument("-m", "--mountpoint", help="The mountpoint to check", required=True)
-    parser.add_argument("-u", "--unit", help="The unit to use for display", choices=util.get_valid_units(), required=False)
+    parser = argparse.ArgumentParser(description='Get disk info from df(1)')
+    parser.add_argument('-m', '--mountpoint', help='The mountpoint to check', required=True)
+    parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
     args = parser.parse_args()
     
     disk_info = get_disk_usage(args.mountpoint)
