@@ -61,7 +61,7 @@ font-2 = "Noto Sans:size=11;1"
 font-3 = "Arimo Nerd Font:size=14;2"
 
 modules-left = 
-modules-right = speedtest network-throughput filesystem-usage-clickable-root filesystem-usage-clickable-work memory-usage-clickable cpu wlan-wlo1 weather-san-diego
+modules-right = network-throughput speedtest apt-updates brew-updates flatpak-updates mint-updates filesystem-usage-root filesystem-usage-work memory-usage cpu wlan-wlo1 weather-san-diego
 
 cursor-click = pointer
 cursor-scroll = ns-resize
@@ -76,20 +76,17 @@ type = internal/tray
 format-margin = 8pt
 tray-spacing = 16pt
 
-###############
-# Memory
-###############
-; [module/memory-usage]
-; type = custom/script
-; interval = 2
-; exec = ~/.config/polybar/scripts/memory-usage.py
+[module/memory-usage]
+type = custom/script
+interval = 2
+exec = ~/.config/polybar/scripts/memory-usage.py
 
-; [module/memory-usage-formatted]
-; type = custom/script
-; interval = 2
-; env-format = "{^used! / ^total!}"
-; env-unit = "auto"
-; exec = ~/.config/polybar/scripts/memory-usage-formatted.py --format "$format" --unit "$unit"
+[module/memory-usage-formatted]
+type = custom/script
+interval = 2
+env-format = "{^used! / ^total!}"
+env-unit = "auto"
+exec = ~/.config/polybar/scripts/memory-usage-formatted.py --format "$format" --unit "$unit"
 
 [module/memory-usage-clickable]
 type = custom/script
@@ -97,41 +94,38 @@ interval = 1
 exec = ~/.config/polybar/scripts/memory-usage-clickable.py
 click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --toggle
 
-###############
-# Filesystem
-###############
-; [filesystem-usage-base]
-; type = custom/script
-; interval = 2
-; env-unit = "auto"
-; exec = ~/.config/polybar/scripts/filesystem-usage-formatted.py --mountpoint "$mountpoint" --unit "$unit"
+[filesystem-usage-base]
+type = custom/script
+interval = 2
+env-unit = "auto"
+exec = ~/.config/polybar/scripts/filesystem-usage-formatted.py --mountpoint "$mountpoint" --unit "$unit"
 
-; [module/filesystem-usage-root]
-; inherit = filesystem-usage-base
-; env-mountpoint = "/"
+[module/filesystem-usage-root]
+inherit = filesystem-usage-base
+env-mountpoint = "/"
 
-; [module/filesystem-usage-work]
-; inherit = filesystem-usage-base
-; env-mountpoint = "/work"
+[module/filesystem-usage-work]
+inherit = filesystem-usage-base
+env-mountpoint = "/work"
 
-; [filesystem-usage-formatted-base]
-; type = custom/script
-; interval = 25
-; env-format = "{^used / ^total}"
-; env-unit = "auto"
-; exec = ~/.config/polybar/scripts/filesystem-usage-formatted.py --mountpoint "$mountpoint" --format "$format" --unit "$unit"
+[filesystem-usage-formatted-base]
+type = custom/script
+interval = 25
+env-format = "{^used / ^total}"
+env-unit = "auto"
+exec = ~/.config/polybar/scripts/filesystem-usage-formatted.py --mountpoint "$mountpoint" --format "$format" --unit "$unit"
 
-; [module/filesystem-usage-formatted-root]
-; inherit = filesystem-usage-formatted-base
-; env-mountpoint = "/"
+[module/filesystem-usage-formatted-root]
+inherit = filesystem-usage-formatted-base
+env-mountpoint = "/"
 
-; [module/filesystem-usage-formatted-work]
-; inherit = filesystem-usage-formatted-base
-; env-mountpoint = "/work"
+[module/filesystem-usage-formatted-work]
+inherit = filesystem-usage-formatted-base
+env-mountpoint = "/work"
 
 [filesystem-usage-clickable-base]
-; click-left will not allow environment variables so the script generates a script to call filesystem-usage-clickable.py with --toggle
-; this is a hack
+; click-left will not allow environment variables so we generate a script to call filesystem-usage-clickable.py with --toggle
+; this is a hack. Also, the updates are sadly not in real time, they instead are based on interval.
 type = custom/script
 interval = 2
 env-unit = "auto"
@@ -141,19 +135,15 @@ exec = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint "$mo
 inherit = filesystem-usage-clickable-base
 env-mountpoint = "/"
 env-unit = "auto"
-env-toggle_script = "/tmp/toggle-gdanko-root.sh"
-click-left = /tmp/toggle-gdanko-root.sh
+env-toggle_script = "~/.polybar-toggle-root.sh"
+click-left = ~/.polybar-toggle-root.sh
 
 [module/filesystem-usage-clickable-work]
 inherit = filesystem-usage-clickable-base
 env-mountpoint = "/work"
 env-unit = "auto"
-env-toggle_script = "/tmp/toggle-gdanko-work.sh"
-click-left = /tmp/toggle-gdanko-work.sh
-
-###############
-# Other Junk
-###############
+env-toggle_script = "~/.polybar-toggle-work.sh"
+click-left = ~/.polybar-toggle-work.sh
 
 [module/brew-outdated]
 type = custom/script
@@ -214,6 +204,27 @@ env-symbol = "NOW"
 type = custom/script
 interval = 300
 exec = ~/.config/polybar/scripts/polybar-speedtest.py --download --upload
+
+[system-updates-base]
+type = custom/script
+interval = 3600
+exec = ~/.config/polybar/scripts/system-updates.py --type "$type"
+
+[module/apt-updates]
+inherit = system-updates-base
+env-type = "apt"
+
+[module/brew-updates]
+inherit = system-updates-base
+env-type = "brew"
+
+[module/flatpak-updates]
+inherit = system-updates-base
+env-type = "flatpak"
+
+[module/mint-updates]
+inherit = system-updates-base
+env-type = "mintupdate"
 
 [settings]
 screenchange-reload = true

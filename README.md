@@ -18,6 +18,7 @@ I use [Xbar](https://xbarapp.com) and [SwiftBar](https://swiftbar.app) on my Mac
 * `memory-usage-formatted.py` - This is a version of `memory-usage.py` that has a `--format` flag which allows you to specify a custom output format. Formatting details will be discussed below.
 * `polybar-speedtest.py` - This script connects to [speedtest.net](https://speedtest.net) and displays current upload and download speeds. It's an enhanced version of this awseome [script](https://github.com/haideralipunjabi/polybar-speedtest/tree/main).
 * `stock-quotes.py` - This script shows basic information about a given stock symbol. It shows the symbol, last price, change amount and percent. It uses [Yahoo! Finance](https://finance.yahoo.com) to gather the data so please use a sane interval as Yahoo! is quick to rate-limit you.
+* `system-updates.py` - This script is able to query a number of different package managers and return the number of available updates. Currently supported are: `apt`, `brew`, `flatpak`, and `mintupdate`. I will be installing other distros via [VirtualBox](https://www.virtualbox.org) in order to gather stuff like [yum](https://en.wikipedia.org/wiki/Yum_(software)), [rpm](https://en.wikipedia.org/wiki/RPM_Package_Manager), and [apk](https://wiki.alpinelinux.org/wiki/Alpine_Package_Keeper).
 * `weather.py` - This script pulls weather data from [Weather API](https://weatherapi.com). You will need to get a free API key from this site to use it. The output shows location name, current temperature, and daily high and low temperatures.
 * `wifi-status.py` - This script uses `iwconfig` to display the current signal strength for the specified interface.
 
@@ -141,8 +142,29 @@ exec = ~/.config/polybar/scripts/stock-quotes.py --symbol "$symbol"
 [module/stocks-goog]
 inherit = stocks-base
 env-symbol = "GOOG"
+
+[system-updates-base]
+type = custom/script
+interval = 3600
+exec = ~/.config/polybar/scripts/system-updates.py --type "$type"
+
+[module/apt-updates]
+inherit = system-updates-base
+env-type = "apt"
+
+[module/brew-updates]
+inherit = system-updates-base
+env-type = "brew"
+
+[module/flatpak-updates]
+inherit = system-updates-base
+env-type = "flatpak"
+
+[module/mint-updates]
+inherit = system-updates-base
+env-type = "mintupdate"
 ```
 
 ## To Do
-* Try to figure out if there is a way to click on each item for multiple formats, like the date module
+* More supported platforms for `system-updates.py`
 
