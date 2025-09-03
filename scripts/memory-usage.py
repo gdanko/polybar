@@ -14,15 +14,21 @@ def get_memory_usage():
         if stdout != '':
             values = re.split(r'\s+', stdout)
             mem_dict = {
-                'success'  : True,
-                'total'    : int(values[1]),
-                'used'     : int(values[2]),
-                'free'     : int(values[3]),
-                'shared'   : int(values[4]),
-                'buffers'  : int(values[5]),
-                'cache'    : int(values[6]),
-                'available': int(values[7]),
+                'success'   : True,
+                'total'     : int(values[1]),
+                'shared'    : int(values[4]),
+                'buffers'   : int(values[5]),
+                'cache'     : int(values[6]),
+                'available' : int(values[7]),
+                'pct_total' : 100,
             }
+            # used = total - available
+            mem_dict['used'] = mem_dict['total'] - mem_dict['available']
+            mem_dict['free'] = mem_dict['total'] - mem_dict['used']
+            # percent_used = (total - available) / total * 100
+            mem_dict['pct_used'] = round(((mem_dict['total'] - mem_dict['available']) / mem_dict['total']) * 100)
+            mem_dict['pct_free'] = mem_dict['pct_total'] - mem_dict['pct_used']
+
         else:
             mem_dict = {
                 'success': False,
