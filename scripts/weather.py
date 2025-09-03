@@ -98,7 +98,8 @@ def get_weather_icon(condition_code, is_day):
 
 def get_weather_data(api_key, location, use_celsius):
     output = {
-        'locations': {},
+        'success': True,
+        'error'  : None,
     }
 
     url_parts = (
@@ -115,54 +116,57 @@ def get_weather_data(api_key, location, use_celsius):
         body = response.read().decode('utf-8')
         if response.status == 200:
             weather_data, err = util.parse_json_string(body)
-            if not location in output['locations']:
-                output['locations'][location] = {}
 
             if err:
-                output['locations'][location]['error'] = f'could not retrieve the weather for {location}: {err}'
+                output['error'] = f'could not retrieve the weather for {location}: {err}'
             else:
-                output['locations'][location]['location'] = weather_data['location']['name']
-                output['locations'][location]['condition_code'] = weather_data['current']['condition']['code']
-                output['locations'][location]['icon'] = get_weather_icon(
+                output['location'] = weather_data['location']['name']
+                output['condition_code'] = weather_data['current']['condition']['code']
+                output['icon'] = get_weather_icon(
                     weather_data['current']['condition']['code'],
                     weather_data['current']['is_day'],
                 )
 
                 if use_celsius:
-                    output['locations'][location]['current_temp'] = weather_data['current']['temp_c']
-                    output['locations'][location]['todays_high'] = weather_data['forecast']['forecastday'][0]['day']['maxtemp_c']
-                    output['locations'][location]['todays_low'] = weather_data['forecast']['forecastday'][0]['day']['mintemp_c']
-                    output['locations'][location]['unit'] = 'C'
+                    output['current_temp'] = weather_data['current']['temp_c']
+                    output['todays_high'] = weather_data['forecast']['forecastday'][0]['day']['maxtemp_c']
+                    output['todays_low'] = weather_data['forecast']['forecastday'][0]['day']['mintemp_c']
+                    output['unit'] = 'C'
                 else:
-                    output['locations'][location]['current_temp'] = weather_data['current']['temp_f']
-                    output['locations'][location]['todays_high'] = weather_data['forecast']['forecastday'][0]['day']['maxtemp_f']
-                    output['locations'][location]['todays_low'] = weather_data['forecast']['forecastday'][0]['day']['mintemp_f']
-                    output['locations'][location]['unit'] = 'F'
+                    output['current_temp'] = weather_data['current']['temp_f']
+                    output['todays_high'] = weather_data['forecast']['forecastday'][0]['day']['maxtemp_f']
+                    output['todays_low'] = weather_data['forecast']['forecastday'][0]['day']['mintemp_f']
+                    output['unit'] = 'F'
+        else:
+            output['success'] = False
+            output['error'] = f'non-200 ({response.status}) code returned'
 
     return output
 
 def main():
-    parser = argparse.ArgumentParser(description="Get weather info from World Weather API")
-    parser.add_argument("-a", "--api-key", help="World Weather API key", required=True)
-    parser.add_argument("-l", "--location", help="The location to query", required=True)
-    parser.add_argument("-c", "--use-celsius", help="Use Celsius instead of Fahrenheit", required=False, default=False, type=bool)
+    parser = argparse.ArgumentParser(description='Get weather info from World Weather API')
+    parser.add_argument('-a', '--api-key', help='World Weather API key', required=True)
+    parser.add_argument('-l', '--location', help='The location to query', required=True)
+    parser.add_argument('-c', '--use-celsius', action='store_true', help='Use Celsius instead of Fahrenheit', required=False, default=False)
     args = parser.parse_args()
 
-    locations = args.location if args.location else config['locations']
+    if not util.network_is_reachable():
+        print(f'{util.color_title(glyphs.md_network_off_outline)} {util.color_error("the network is unreachable")}')
+        sys.exit(1)
+
     weather_data = get_weather_data(args.api_key, args.location, args.use_celsius)
 
-    output = []
-    if len(weather_data['locations']) > 0:
-        for location, location_data in weather_data['locations'].items():
-            current_temp = location_data['current_temp']
-            low_temp = location_data['todays_low']
-            high_temp = location_data['todays_high']
-            unit = location_data['unit']
-            icon = location_data['icon']
-            output.append(f'{util.color_title(icon)} {location} {current_temp}°{unit} ({high_temp}°{unit}{glyphs.cod_arrow_small_up} {low_temp}°{unit}{glyphs.cod_arrow_small_down})')
-
-    print(' | '.join(output))
-    sys.exit(0)
+    if weather_data['success']:
+        current_temp = weather_data['current_temp']
+        low_temp = weather_data['todays_low']
+        high_temp = weather_data['todays_high']
+        unit = weather_data['unit']
+        icon = weather_data['icon']
+        print(f'{util.color_title(icon)} {weather_data["location"]} {current_temp}°{unit} ({high_temp}°{unit}{glyphs.cod_arrow_small_up} {low_temp}°{unit}{glyphs.cod_arrow_small_down})')
+        sys.exit(0)
+    else:
+        print(f'{util.color_title(glyphs.md_alert)} {util.color_error(weather_data["error"])}')
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
