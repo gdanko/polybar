@@ -2,6 +2,7 @@
 
 from polybar import glyphs, state, util
 import argparse
+import getpass
 import os
 import re
 import sys
@@ -10,6 +11,14 @@ import sys
 # This is a version of the memory-usage.py script that has a > 1 output formats.
 # Clicking on the item in bar will toggle the output.
 # This is experimental!
+
+def get_statefile_name() -> str:
+    statefile = os.path.basename(__file__)
+    statefile_no_ext = os.path.splitext(statefile)[0]
+    return os.path.join(
+        '/tmp',
+        f'{statefile_no_ext}-{getpass.getuser()}-state'
+    )
 
 def get_memory_usage():
     """
@@ -56,14 +65,16 @@ def get_memory_usage():
     return mem_dict
 
 def main():
-    total_states = 3
+    mode_count = 3
     parser = argparse.ArgumentParser(description="Get memory usage from free(1)")
     parser.add_argument("-u", "--unit", help="The unit to use for display", choices=util.get_valid_units(), required=False)
     parser.add_argument('-t', '--toggle', action="store_true", help='Toggle the output format', required=False)
     args = parser.parse_args()
 
+    statefile_name = get_statefile_name()
+
     memory_info = get_memory_usage()
-    mode = state.next_state(total_states) if args.toggle else state.read_state()
+    mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
 
     if memory_info['success']:
         pct_total = f'{memory_info["pct_total"]}%'
