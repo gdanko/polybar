@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
+from dataclasses import dataclass, field
 from pathlib import Path
 from polybar import glyphs, util
-from typing import Dict, List, NamedTuple, Tuple, Union
+from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 import argparse
 import json
 import os
@@ -10,10 +11,52 @@ import re
 import sys
 
 class Package(NamedTuple):
-    BrewType: None
-    CurrentVersion: str
-    InstalledVersions: List[str]
-    Name: str
+    BrewType: Optional[str] = None
+    CurrentVersion: Optional[str] = None
+    InstalledVersions: List[str] = field(default_factory=list)
+    PreviousVersion: Optional[str] = None
+    Name: Optional[str] = None
+
+def find_apt_updates():
+    """
+    Execute apt to search for new updates
+    """
+    data = {
+        'success' : True,
+        'packages': [],
+        'error'   : None,
+    }
+    binary = 'apt'
+    command = f'{binary} list --upgradable'
+
+    if util.is_binary_installed(binary):
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc == 0:
+            lines = stdout.strip().split('\n')
+            # libegl-mesa0/noble-updates 25.0.7-0ubuntu0.24.04.2 amd64 [upgradable from: 25.0.7-0ubuntu0.24.04.1]
+            for line in lines[1:]:
+                # bits = re.split(r'\s+', line)
+                pattern = re.compile(
+                    r'^([^/]+)/\S+\s+(\S+)\s+\S+\s+\[upgradable from:\s+(\S+)\]'
+                )
+                match = pattern.search(line)
+                if match:
+                    package_name, new_version, old_version = match.groups()
+                    data['packages'].append(
+                        Package(
+                            CurrentVersion=new_version,
+                            PreviousVersion=old_version,
+                            Name=package_name
+                        )
+                    )
+        else:
+            data['success'] = False
+            data['error'] = f'Failed to execute "{command}"'
+    else:
+        data['success'] = False
+        data['error'] = f'{binary} is not installed'
+
+    return data
 
 # -> Tuple[Union[Dict[str, List[Package]], None], Union[str, None]]:
 def find_brew_updates():
@@ -23,7 +66,7 @@ def find_brew_updates():
     data = {
         'success' : True,
         'packages': [],
-        'error'   : None        
+        'error'   : None,
     }
     binary = 'brew'
 
@@ -81,7 +124,7 @@ def find_brew_updates():
     else:
         data['success'] = False
         data['error'] = f'{binary} is not installed'
-    
+
     return data
 
 def find_flatpak_updates():
@@ -119,14 +162,52 @@ def find_flatpak_updates():
  
     return data
 
+def find_mint_updates():
+    """
+    Execute apt to search for new updates
+    """
+    data = {
+        'success' : True,
+        'packages': [],
+        'error'   : None,
+    }
+    binary = 'mintupdate-cli'
+    command = f'{binary} list -r'
+
+    if util.is_binary_installed(binary):
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc == 0:
+            lines = stdout.strip().split('\n')
+            for line in lines:
+                bits = re.split(r'\s+', line)
+                data['packages'].append(
+                    Package(
+                        CurrentVersion=bits[2],
+                        Name=bits[1]
+                    )
+                )
+        else:
+            data['success'] = False
+            data['error'] = f'Failed to execute "{command}"'
+    else:
+        data['success'] = False
+        data['error'] = f'{binary} is not installed'
+
+    return data
+
 def find_updates(package_type: str=''):
-    if package_type == 'brew':
+    if package_type == 'apt':
+        return find_apt_updates()
+    elif package_type == 'brew':
         return find_brew_updates()
     elif package_type == 'flatpak':
         return find_flatpak_updates()
+    elif package_type == 'mintupdate':
+        return find_mint_updates()
+    # snap uses "snap refresh"
 
 def main():
-    valid_types = ['apt', 'brew', 'flatpak', 'mint', 'snap']
+    valid_types = ['apt', 'brew', 'flatpak', 'mintupdate', 'snap']
     parser = argparse.ArgumentParser(description='Check available system updates from different sources')
     parser.add_argument('-t', '--type', help=f'The type of update to query; valid choices are: {', '.join(valid_types)}', required=True)
     args = parser.parse_args()
