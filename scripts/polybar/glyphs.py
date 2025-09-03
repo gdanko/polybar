@@ -90,3 +90,9 @@ md_speedometer_fast   = util.surrogatepass('\udb81\udcc5')
 # Others
 cod_package        = util.surrogatepass('\ueb29')
 md_package_variant = util.surrogatepass('\udb80\udfd6')
+
+# Alerts
+md_alert               = util.surrogatepass('\udb80\udc26')
+md_network_off         = util.surrogatepass('\udb83\udc9b')
+md_network_off_outline = util.surrogatepass('\udb83\udc9c')
+oct_alert              = util.surrogatepass('\uf421')
