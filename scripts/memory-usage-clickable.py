@@ -2,7 +2,6 @@
 
 from polybar import glyphs, state, util
 import argparse
-import getpass
 import os
 import re
 import sys
@@ -16,8 +15,8 @@ def get_statefile_name() -> str:
     statefile = os.path.basename(__file__)
     statefile_no_ext = os.path.splitext(statefile)[0]
     return os.path.join(
-        '/tmp',
-        f'{statefile_no_ext}-{getpass.getuser()}-state'
+        util.get_home_directory(),
+        f'.polybar-{statefile_no_ext}-state'
     )
 
 def get_memory_usage():
@@ -66,9 +65,9 @@ def get_memory_usage():
 
 def main():
     mode_count = 3
-    parser = argparse.ArgumentParser(description="Get memory usage from free(1)")
-    parser.add_argument("-u", "--unit", help="The unit to use for display", choices=util.get_valid_units(), required=False)
-    parser.add_argument('-t', '--toggle', action="store_true", help='Toggle the output format', required=False)
+    parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
+    parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
+    parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     args = parser.parse_args()
 
     statefile_name = get_statefile_name()

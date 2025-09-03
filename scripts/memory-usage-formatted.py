@@ -51,9 +51,9 @@ def get_memory_usage():
 
 def main():
     valid_tokens = ['^pct_total', '^pct_used', '^pct_free', '^total', '^used', '^free']
-    parser = argparse.ArgumentParser(description="Get memory usage from free(1)")
-    parser.add_argument("-u", "--unit", help="The unit to use for display", choices=util.get_valid_units(), required=False)
-    parser.add_argument('-f', '--format', help=f'Output format, e.g., {{^free / ^total}}; valid tokens are: {",".join(valid_tokens)} ', required=False, default='{^free / ^total}')
+    parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
+    parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
+    parser.add_argument('-f', '--format', help=f'Output format, e.g., {{^free / ^total}}; valid tokens are: {', '.join(valid_tokens)} ', required=False, default='{^free / ^total}')
     args = parser.parse_args()
 
     memory_info = get_memory_usage()
