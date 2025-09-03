@@ -59,6 +59,20 @@ def get_valid_units() -> list:
     """
     return ['K', 'Ki', 'M', 'Mi', 'G', 'Gi', 'T', 'Ti', 'P', 'Pi', 'E', 'Ei', 'Z', 'Zi', 'auto']
 
+def network_speed(number: int=0, bytes: bool=False, no_suffix: bool=False) -> str:
+    """
+    Intelligently determine network speed
+    """
+    # test this with dummy numbers
+    suffix = 'iB/s' if bytes else 'bit/s'
+
+    for unit in ['', 'K', 'M', 'G', 'T', 'P']:
+        if abs(number) < 1024.0:
+            if bytes:
+                return f'{round(number / 8, 2)} {unit}{suffix}'
+            return f'{round(number, 2)} {unit}{suffix}'
+        number = number / 1024
+
 def byte_converter(number: int=0, unit: Optional[str] = None) -> str:
     """
     Convert bytes to the given unit.
@@ -92,13 +106,12 @@ def file_exists(filename: str='') -> bool:
         return True
     return False
 
-def get_config_file_path(filename: str='') -> str:
+def get_config_directory() -> str:
     return os.path.join(
         Path.home(),
         '.config',
         'polybar',
-        'scripts',
-        filename
+        'scripts'
     )
 
 def parse_config_file(filename: str='', required_keys: list=[]):
