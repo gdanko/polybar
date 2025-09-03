@@ -71,6 +71,26 @@ env-mountpoint = "/"
 inherit = filesystem-base
 env-mountpoint = "/work"
 
+[filesystem-usage-clickable-base]
+type = custom/script
+interval = 2
+env-unit = "auto"
+exec = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint "$mountpoint" --unit "$unit" --toggle-script "$toggle_script"
+
+[module/filesystem-usage-clickable-root]
+inherit = filesystem-usage-clickable-base
+env-mountpoint = "/"
+env-unit = "auto"
+env-toggle_script = "/tmp/toggle-gdanko-root.sh"
+click-left = /tmp/toggle-gdanko-root.sh
+
+[module/filesystem-usage-clickable-work]
+inherit = filesystem-usage-clickable-base
+env-mountpoint = "/work"
+env-unit = "auto"
+env-toggle_script = "/tmp/toggle-gdanko-work.sh"
+click-left = /tmp/toggle-gdanko-work.sh
+
 [module/memory-usage]
 type = custom/script
 interval = 2
@@ -109,7 +129,7 @@ interval = 900
 env-api_key = "<your api key>"
 exec = ~/.config/polybar/scripts/weather.py --api-key "$api_key" --location "$location"
 
-[module/weather-san-diego]
+[module/weather-denver]
 inherit = weather-base
 env-location = "Denver, CO, US"
 
