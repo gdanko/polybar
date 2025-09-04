@@ -13,7 +13,7 @@ import sys
 class Package(NamedTuple):
     BrewType: Optional[str] = None
     CurrentVersion: Optional[str] = None
-    InstalledVersions: List[str] = field(default_factory=list)
+    InstalledVersions: List[str] = None
     PreviousVersion: Optional[str] = None
     Name: Optional[str] = None
 
@@ -26,10 +26,18 @@ def find_apt_updates():
         'packages': [],
         'error'   : None,
     }
+
     binary = 'apt'
-    command = f'{binary} list --upgradable'
 
     if util.is_binary_installed(binary):
+        command = f'sudo {binary} update'
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc != 0:
+            data['success'] = False
+            data['error'] = f'Failed to execute "{command}"'
+            return data
+
+        command = f'sudo {binary} list --upgradable'
         rc, stdout, stderr = util.run_piped_command(command)
         if rc == 0:
             lines = stdout.strip().split('\n')
@@ -68,6 +76,7 @@ def find_brew_updates():
         'packages': [],
         'error'   : None,
     }
+
     binary = 'brew'
 
     if util.is_binary_installed(binary):
@@ -84,6 +93,7 @@ def find_brew_updates():
             data['success'] = False
             data['error'] = f'Failed to execute "{command}"'
             return data
+
         manually_installed = {line for line in stdout.splitlines()}
 
         command = f'{binary} outdated --json'
@@ -136,42 +146,50 @@ def find_dnf_updates():
         'packages': [],
         'error'   : None,
     }
-    # binary = 'dnf'
-    # command = f'{binary} check-update'
 
-    # if util.is_binary_installed(binary):
-    #     rc, stdout, stderr = util.run_piped_command(command)
-    #     if rc == 0:
-    #         _, after = stdout.strip().split('Repositories loaded.', 1)
-    #         lines = after.lstrip().strip().split('\n')
-    #         for line in lines:
-    #             bits = re.split(r'\s+', line)
-    #             data['packages'].append(
-    #                 Package(
-    #                     CurrentVersion=bits[1],
-    #                     Name=bits[0]
-    #                 )
-    #             )
-    #     else:
-    #         data['success'] = False
-    #         data['error'] = f'Failed to execute "{command}"'
-    # else:
-    #     data['success'] = False
-    #     data['error'] = f'{binary} is not installed'
+    binary = 'dnf'
 
-    # This is here to test locally as I don't have yum
-    with open(os.path.join(util.get_config_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
-        stdout = f.read()
-        _, after = stdout.strip().split('Repositories loaded.', 1)
-        lines = after.lstrip().strip().split('\n')
-        for line in lines:
-            bits = re.split(r'\s+', line)
-            data['packages'].append(
-                Package(
-                    CurrentVersion=bits[1],
-                    Name=bits[0]
+    if util.is_binary_installed(binary):
+        command = f'sudo {binary} update -y'
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc != 0:
+            data['success'] = False
+            data['error'] = f'Failed to execute "{command}"'
+            return data
+
+        command = f'sudo {binary} check-update'
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc == 0:
+            _, after = stdout.strip().split('Repositories loaded.', 1)
+            lines = after.lstrip().strip().split('\n')
+            for line in lines:
+                bits = re.split(r'\s+', line)
+                data['packages'].append(
+                    Package(
+                        CurrentVersion=bits[1],
+                        Name=bits[0]
+                    )
                 )
-            )
+        else:
+            data['success'] = False
+            data['error'] = f'Failed to execute "{command}"'
+    else:
+        data['success'] = False
+        data['error'] = f'{binary} is not installed'
+
+    # This is here to test locally as I don't have dnf
+    # with open(os.path.join(util.get_config_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
+    #     stdout = f.read()
+    #     _, after = stdout.strip().split('Repositories loaded.', 1)
+    #     lines = after.lstrip().strip().split('\n')
+    #     for line in lines:
+    #         bits = re.split(r'\s+', line)
+    #         data['packages'].append(
+    #             Package(
+    #                 CurrentVersion=bits[1],
+    #                 Name=bits[0]
+    #             )
+    #         )
 
     return data
 
@@ -184,20 +202,26 @@ def find_flatpak_updates():
         'packages': [],
         'error'   : None        
     }
+
     binary = 'flatpak'
-    command = f'{binary} remote-ls --updates'
 
     if util.is_binary_installed(binary):
+        command = f'sudo {binary} update --appstream'
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc != 0:
+            data['success'] = False
+            data['error'] = f'failed to execute {command}'
+            return data
+
+        command = f'sudo {binary} remote-ls --updates --columns=name,version'
         rc, stdout, stderr = util.run_piped_command(command)
         if rc == 0:
             lines = stdout.strip().split('\n')
-            # fs = re.split(r'\s+', lines[1])[1]
             for line in lines:
                 bits = re.split(r'\s+', line)
                 data['packages'].append(
                     Package(
-                        CurrentVersion=bits[2],
-                        InstalledVersions=[],
+                        CurrentVersion=bits[1],
                         Name=bits[0],
                     )
                 )
@@ -219,10 +243,11 @@ def find_mint_updates():
         'packages': [],
         'error'   : None,
     }
+
     binary = 'mintupdate-cli'
-    command = f'{binary} list -r'
 
     if util.is_binary_installed(binary):
+        command = f'sudo {binary} list -r'
         rc, stdout, stderr = util.run_piped_command(command)
         if rc == 0:
             lines = stdout.strip().split('\n')
@@ -243,6 +268,167 @@ def find_mint_updates():
 
     return data
 
+def find_pacman_updates():
+    """
+    Execute pacman to search for new updates
+    """
+    data = {
+        'success' : True,
+        'packages': [],
+        'error'   : None,
+    }
+
+    binary = 'pacman'
+
+    if util.is_binary_installed(binary):
+        command = f'sudo {binary} -Qu'
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc == 0:
+            _, after = stdout.strip().split(':: Checking for updates...', 1)
+            lines = after.lstrip().strip().split('\n')
+            for line in lines:
+                bits = re.split(r'\s+', line)
+                data['packages'].append(
+                    Package(
+                        CurrentVersion=bits[1],
+                        Name=bits[0],
+                        PreviousVersion=bits[3],
+                    )
+                )
+        else:
+            data['success'] = False
+            data['error'] = f'Failed to execute "{command}"'
+    else:
+        data['success'] = False
+        data['error'] = f'{binary} is not installed'
+
+    # This is here to test locally as I don't have pacman
+    # with open(os.path.join(util.get_config_directory(), 'pacman-output.txt'), 'r', encoding='utf-8') as f:
+    #     stdout = f.read()
+    #     _, after = stdout.strip().split(':: Checking for updates...', 1)
+    #     lines = after.lstrip().strip().split('\n')
+    #     for line in lines:
+    #         bits = re.split(r'\s+', line)
+    #         data['packages'].append(
+    #             Package(
+    #                 CurrentVersion=bits[3],
+    #                 Name=bits[0],
+    #                 PreviousVersion=bits[1],
+    #             )
+    #         )
+
+    return data
+
+def find_snap_updates():
+    """
+    Execute snap to search for new updates
+    """
+    data = {
+        'success' : True,
+        'packages': [],
+        'error'   : None,
+    }
+
+    binary = 'snap'
+
+    if util.is_binary_installed(binary):
+        command = f'sudo {binary} refresh --list'
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc == 0:
+            lines = stdout.lstrip().strip().split('\n')
+            for line in lines[1:]:
+                bits = re.split(r'\s+', line)
+                data['packages'].append(
+                    Package(
+                        CurrentVersion=bits[1],
+                        Name=bits[0]
+                    )
+                )
+        else:
+            data['success'] = False
+            data['error'] = f'Failed to execute "{command}"'
+    else:
+        data['success'] = False
+        data['error'] = f'{binary} is not installed'
+
+    # This is here to test locally as I don't have yum
+    # with open(os.path.join(util.get_config_directory(), 'snap-output.txt'), 'r', encoding='utf-8') as f:
+    #     stdout = f.read()
+    #     lines = stdout.lstrip().strip().split('\n')
+    #     for line in lines[1:]:
+    #         bits = re.split(r'\s+', line)
+    #         data['packages'].append(
+    #             Package(
+    #                 CurrentVersion=bits[1],
+    #                 Name=bits[0]
+    #             )
+    #         )
+
+    return data
+
+def find_yay_updates(aur: bool=False):
+    """
+    Execute yay to search for new updates
+    """
+    data = {
+        'success' : True,
+        'packages': [],
+        'error'   : None,
+    }
+
+    binary = 'yay'
+
+    if util.is_binary_installed(binary):
+        command = f'sudo {binary} -Qua'
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc == 0:
+            _, after = stdout.strip().split(':: Checking for updates...', 1)
+            lines = after.lstrip().strip().split('\n')
+
+            if aur:
+                lines = [line for line in lines if line.endswith('(AUR)')]
+            else:
+                lines = [line for line in lines if not line.endswith('(AUR)')]
+
+            for line in lines:
+                bits = re.split(r'\s+', line)
+                data['packages'].append(
+                    Package(
+                        CurrentVersion=bits[3],
+                        Name=bits[0],
+                        PreviousVersion=bits[1],
+                    )
+                )
+        else:
+            data['success'] = False
+            data['error'] = f'Failed to execute "{command}"'
+    else:
+        data['success'] = False
+        data['error'] = f'{binary} is not installed'
+
+    # This is here to test locally as I don't have yay
+    # with open(os.path.join(util.get_config_directory(), 'yay-output.txt'), 'r', encoding='utf-8') as f:
+    #     stdout = f.read()
+    #     _, after = stdout.strip().split(':: Checking for updates...', 1)
+    #     lines = after.lstrip().strip().split('\n')
+
+    #     if aur:
+    #         lines = [line for line in lines if line.endswith('(AUR)')]
+    #     else:
+    #         lines = [line for line in lines if not line.endswith('(AUR)')]
+
+    #     for line in lines:
+    #         bits = re.split(r'\s+', line)
+    #         data['packages'].append(
+    #             Package(
+    #                 CurrentVersion=bits[3],
+    #                 Name=bits[0],
+    #                 PreviousVersion=bits[1],
+    #             )
+    #         )
+
+    return data
+
 def find_yum_updates():
     """
     Execute yum to search for new updates
@@ -252,10 +438,18 @@ def find_yum_updates():
         'packages': [],
         'error'   : None,
     }
+
     binary = 'yum'
-    command = f'{binary} check-update'
 
     if util.is_binary_installed(binary):
+        command = f'sudo {binary} update -y'
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc != 0:
+            data['success'] = False
+            data['error'] = f'Failed to execute "{command}"'
+            return data
+
+        command = f'sudo {binary} check-update'
         rc, stdout, stderr = util.run_piped_command(command)
         if rc == 0:
             _, after = stdout.strip().split('Repositories loaded.', 1)
@@ -302,12 +496,19 @@ def find_updates(package_type: str=''):
         return find_flatpak_updates()
     elif package_type == 'mintupdate':
         return find_mint_updates()
+    elif package_type == 'pacman':
+        return find_pacman_updates()
+    elif package_type == 'snap':
+        return find_snap_updates()
+    elif package_type == 'yay':
+        return find_yay_updates(aur=False)
+    elif package_type == 'yay-aur':
+        return find_yay_updates(aur=True)
     elif package_type == 'yum':
         return find_yum_updates()
-    # snap uses "snap refresh"
 
 def main():
-    valid_types = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'snap', 'yum']
+    valid_types = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
     parser = argparse.ArgumentParser(description='Check available system updates from different sources')
     parser.add_argument('-t', '--type', help=f'The type of update to query; valid choices are: {', '.join(valid_types)}', required=True)
     args = parser.parse_args()
@@ -317,7 +518,7 @@ def main():
         sys.exit(1)
 
     update_info = find_updates(package_type=args.type)
-    
+
     if update_info['success']:
         packages = 'package' if len(update_info['packages']) == 1 else 'packages'
         print(f'{util.color_title(glyphs.md_package_variant)} {util.color_title(args.type)} {len(update_info["packages"])} outdated {packages}')
