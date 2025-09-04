@@ -14,8 +14,13 @@ config.ini
 scripts/generate-config-example.sh
 
 # Test files
-dummy.sh
 config.ini.test
-menu-test.sh
+dummy.sh
 example.sh
+menu-test.sh
+weather.sh
+
+pacman-output.txt
+snap-output.txt
+yay-output.txt
 yum-output.txt
