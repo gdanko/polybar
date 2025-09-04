@@ -91,11 +91,11 @@ def main():
                 output = output.replace(token, token_map[token])
 
     if memory_info['success']:
-        memory_usage = f'{util.color_title(glyphs.md_memory)} {output}'
+        print(f'{util.color_title(glyphs.md_memory)} {output}')
+        sys.exit(0)
     else:
-        memory_usage = f'{util.color_title(glyphs.md_memory)} {util.color_error(memory_info['error'])}'
-
-    print(memory_usage)
+        print(f'{util.color_title(glyphs.md_memory)} {util.color_error(memory_info['error'])}')
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

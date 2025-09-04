@@ -67,11 +67,11 @@ def main():
     disk_info = get_disk_usage(args.mountpoint)
 
     if disk_info['success']:
-        filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {util.color_title(disk_info["mountpoint"])} {util.byte_converter(number=disk_info["used"], unit=args.unit)} / {util.byte_converter(number=disk_info["total"], unit=args.unit)}'
+        print(f'{util.color_title(glyphs.md_harddisk)} {util.color_title(disk_info["mountpoint"])} {util.byte_converter(number=disk_info["used"], unit=args.unit)} / {util.byte_converter(number=disk_info["total"], unit=args.unit)}')
+        sys.exit(0)
     else:
-        filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {util.color_error(disk_info["error"])}'
-
-    print(filesystem_usage)
+        print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(disk_info["error"])}')
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

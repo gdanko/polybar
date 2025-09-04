@@ -84,15 +84,15 @@ def main():
         free      = util.byte_converter(number=memory_info['free'], unit=args.unit)
 
         if mode == 0:
-            memory_usage = f'{util.color_title(glyphs.md_memory)} {used} / {total}'
+            print(f'{util.color_title(glyphs.md_memory)} {used} / {total}')
         elif mode == 1:
-            memory_usage = f'{util.color_title(glyphs.md_memory)} {pct_used} used'
+            print(f'{util.color_title(glyphs.md_memory)} {pct_used} used')
         elif mode == 2:
-            memory_usage = f'{util.color_title(glyphs.md_memory)} {used} used / {free} free'
+            print(f'{util.color_title(glyphs.md_memory)} {used} used / {free} free')
+        sys.exit(0)
     else:
-        memory_usage = f'{util.color_title(glyphs.md_memory)} {util.color_error(memory_info['error'])}'
-    
-    print(memory_usage)
+        print(f'{util.color_title(glyphs.md_memory)} {util.color_error(memory_info['error'])}')
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

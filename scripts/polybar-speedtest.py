@@ -87,8 +87,10 @@ def main():
 
     if len(output) > 0:
         print(f'{util.color_title(icon)} {' '.join(output)}')
+        sys.exit(0)
     else:
         print(f'{util.color_title(icon)} {util.color_error('All tests failed')}')
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()

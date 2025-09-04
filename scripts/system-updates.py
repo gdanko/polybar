@@ -127,6 +127,54 @@ def find_brew_updates():
 
     return data
 
+def find_dnf_updates():
+    """
+    Execute dbf to search for new updates
+    """
+    data = {
+        'success' : True,
+        'packages': [],
+        'error'   : None,
+    }
+    # binary = 'dnf'
+    # command = f'{binary} check-update'
+
+    # if util.is_binary_installed(binary):
+    #     rc, stdout, stderr = util.run_piped_command(command)
+    #     if rc == 0:
+    #         _, after = stdout.strip().split('Repositories loaded.', 1)
+    #         lines = after.lstrip().strip().split('\n')
+    #         for line in lines:
+    #             bits = re.split(r'\s+', line)
+    #             data['packages'].append(
+    #                 Package(
+    #                     CurrentVersion=bits[1],
+    #                     Name=bits[0]
+    #                 )
+    #             )
+    #     else:
+    #         data['success'] = False
+    #         data['error'] = f'Failed to execute "{command}"'
+    # else:
+    #     data['success'] = False
+    #     data['error'] = f'{binary} is not installed'
+
+    # This is here to test locally as I don't have yum
+    with open(os.path.join(util.get_config_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
+        stdout = f.read()
+        _, after = stdout.strip().split('Repositories loaded.', 1)
+        lines = after.lstrip().strip().split('\n')
+        for line in lines:
+            bits = re.split(r'\s+', line)
+            data['packages'].append(
+                Package(
+                    CurrentVersion=bits[1],
+                    Name=bits[0]
+                )
+            )
+
+    return data
+
 def find_flatpak_updates():
     """
     Execute flatpak to search for new updates
@@ -195,19 +243,71 @@ def find_mint_updates():
 
     return data
 
+def find_yum_updates():
+    """
+    Execute yum to search for new updates
+    """
+    data = {
+        'success' : True,
+        'packages': [],
+        'error'   : None,
+    }
+    binary = 'yum'
+    command = f'{binary} check-update'
+
+    if util.is_binary_installed(binary):
+        rc, stdout, stderr = util.run_piped_command(command)
+        if rc == 0:
+            _, after = stdout.strip().split('Repositories loaded.', 1)
+            lines = after.lstrip().strip().split('\n')
+            for line in lines:
+                bits = re.split(r'\s+', line)
+                data['packages'].append(
+                    Package(
+                        CurrentVersion=bits[1],
+                        Name=bits[0]
+                    )
+                )
+        else:
+            data['success'] = False
+            data['error'] = f'Failed to execute "{command}"'
+    else:
+        data['success'] = False
+        data['error'] = f'{binary} is not installed'
+
+    # This is here to test locally as I don't have yum
+    # with open(os.path.join(util.get_config_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
+    #     stdout = f.read()
+    #     _, after = stdout.strip().split('Repositories loaded.', 1)
+    #     lines = after.lstrip().strip().split('\n')
+    #     for line in lines:
+    #         bits = re.split(r'\s+', line)
+    #         data['packages'].append(
+    #             Package(
+    #                 CurrentVersion=bits[1],
+    #                 Name=bits[0]
+    #             )
+    #         )
+
+    return data
+
 def find_updates(package_type: str=''):
     if package_type == 'apt':
         return find_apt_updates()
     elif package_type == 'brew':
         return find_brew_updates()
+    elif package_type == 'dnf':
+        return find_dnf_updates()
     elif package_type == 'flatpak':
         return find_flatpak_updates()
     elif package_type == 'mintupdate':
         return find_mint_updates()
+    elif package_type == 'yum':
+        return find_yum_updates()
     # snap uses "snap refresh"
 
 def main():
-    valid_types = ['apt', 'brew', 'flatpak', 'mintupdate', 'snap']
+    valid_types = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'snap', 'yum']
     parser = argparse.ArgumentParser(description='Check available system updates from different sources')
     parser.add_argument('-t', '--type', help=f'The type of update to query; valid choices are: {', '.join(valid_types)}', required=True)
     args = parser.parse_args()

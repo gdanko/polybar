@@ -75,20 +75,25 @@ def main():
     
     quote = get_stock_quotes(args.symbol)
 
-    if quote['symbol_data']['price'] is not None and quote['symbol_data']['last'] is not None:
-        price = quote['symbol_data']['price']
-        last = quote['symbol_data']['last']
+    if quote['success']:
+        if quote['symbol_data']['price'] is not None and quote['symbol_data']['last'] is not None:
+            price = quote['symbol_data']['price']
+            last = quote['symbol_data']['last']
 
-        if price > last:
-            arrow = glyphs.cod_arrow_small_up
-            change_amount = f'{util.pad_float((price - last))}'
-            pct_change = f'{util.pad_float((price - last) / last * 100)}'
+            if price > last:
+                arrow = glyphs.cod_arrow_small_up
+                change_amount = f'{util.pad_float((price - last))}'
+                pct_change = f'{util.pad_float((price - last) / last * 100)}'
+            else:
+                arrow = glyphs.cod_arrow_small_down
+                change_amount = f'{util.pad_float((float(last - price)))}'
+                pct_change = f'{util.pad_float((last - price) / last * 100)}'
+            print(f'{util.color_title(glyphs.cod_graph_line)} {args.symbol} ${price} {arrow}${change_amount} ({pct_change}%)')
         else:
-            arrow = glyphs.cod_arrow_small_down
-            change_amount = f'{util.pad_float((float(last - price)))}'
-            pct_change = f'{util.pad_float((last - price) / last * 100)}'
-        print(f'{util.color_title(glyphs.cod_graph_line)} {args.symbol} ${price} {arrow}${change_amount} ({pct_change}%)')
+            print(f'{util.color_title(glyphs.cod_graph_line)} {util.color_error("incomplete data")}')
+            sys.exit(1)
     else:
+        print(f'{util.color_title(glyphs.cod_graph_line)} {util.color_error(quote["error"])}')
         sys.exit(1)
 
 if __name__ == "__main__":

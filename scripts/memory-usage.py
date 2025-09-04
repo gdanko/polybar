@@ -56,11 +56,11 @@ def main():
     memory_info = get_memory_usage()
 
     if memory_info['success']:
-        memory_usage = f'{util.color_title(glyphs.md_memory)} {util.byte_converter(memory_info["used"], unit=args.unit)} / {util.byte_converter(memory_info["total"], unit=args.unit)}'
+        print(f'{util.color_title(glyphs.fa_memory)} {util.byte_converter(memory_info["used"], unit=args.unit)} / {util.byte_converter(memory_info["total"], unit=args.unit)}')
+        sys.exit(0)
     else:
-        memory_usage = f'{util.color_title(glyphs.md_memory)} {util.color_error(memory_info['error'])}'
-
-    print(memory_usage)
+        print(f'{util.color_title(glyphs.fa_memory)} {util.color_error(memory_info['error'])}')
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

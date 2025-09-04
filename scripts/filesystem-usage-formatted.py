@@ -100,11 +100,11 @@ def main():
                 output = output.replace(token, token_map[token])
 
     if disk_info['success']:
-        filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {util.color_title(disk_info["mountpoint"])} {output}'
+        print(f'{util.color_title(glyphs.md_harddisk)} {util.color_title(disk_info["mountpoint"])} {output}')
+        sys.exit(0)
     else:
-        filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {util.color_error(disk_info["error"])}'
-
-    print(filesystem_usage)
+        print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(disk_info["error"])}')
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

@@ -139,15 +139,15 @@ def main():
         free      = util.byte_converter(number=disk_info['free'], unit=args.unit)
 
         if mode == 0:
-            filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {used} / {total}'
+            print(f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {used} / {total}')
         elif mode == 1:
-            filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {pct_used} used'
+            print(f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {pct_used} used')
         elif mode == 2:
-            filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {used} used / {free} free'
+            print(f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {used} used / {free} free')
+        sys.exit(0)
     else:
-        filesystem_usage = f'{util.color_title(glyphs.md_harddisk)} {util.color_error(args.mountpoint)} {util.color_error(disk_info["error"])}'
-
-    print(filesystem_usage)
+        print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(args.mountpoint)} {util.color_error(disk_info["error"])}')
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

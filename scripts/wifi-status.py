@@ -87,12 +87,12 @@ def main():
 
     if wifi_status['success']:
         wifi_icon = get_status_icon(wifi_status['signal'])
-        output = f'{util.color_title(wifi_icon)} {wifi_status["interface"]} {wifi_status["signal"]} dBm'
+        print(f'{util.color_title(wifi_icon)} {wifi_status["interface"]} {wifi_status["signal"]} dBm')
+        sys.exit(0)
     else:
         wifi_icon = glyphs.md_wifi_strength_alert_outline
-        output = f'{util.color_title(wifi_icon)} {wifi_status["interface"]} {wifi_status["error"]}'
-    
-    print(output)
+        print(f'{util.color_title(wifi_icon)} {wifi_status["interface"]} {wifi_status["error"]}')
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
