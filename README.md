@@ -18,7 +18,7 @@ I use [Xbar](https://xbarapp.com) and [SwiftBar](https://swiftbar.app) on my Mac
 * `memory-usage-formatted.py` - This is a version of `memory-usage.py` that has a `--format` flag which allows you to specify a custom output format. Formatting details will be discussed below.
 * `polybar-speedtest.py` - This script connects to [speedtest.net](https://speedtest.net) and displays current upload and download speeds. It's an enhanced version of this awseome [script](https://github.com/haideralipunjabi/polybar-speedtest/tree/main).
 * `stock-quotes.py` - This script shows basic information about a given stock symbol. It shows the symbol, last price, change amount and percent. It uses [Yahoo! Finance](https://finance.yahoo.com) to gather the data so please use a sane interval as Yahoo! is quick to rate-limit you.
-* `system-updates.py` - This script is able to query a number of different package managers and return the number of available updates. Currently supported are: `apt`, `brew`, `flatpak`, and `mintupdate`. I will be installing other distros via [VirtualBox](https://www.virtualbox.org) in order to gather stuff like [yum](https://en.wikipedia.org/wiki/Yum_(software)), [rpm](https://en.wikipedia.org/wiki/RPM_Package_Manager), and [apk](https://wiki.alpinelinux.org/wiki/Alpine_Package_Keeper).
+* `system-updates.py` - This script is able to query a number of different package managers and return the number of available updates. Currently supported are: `apt`, `brew`, `dnf`, `flatpak`, `mintupdate`, `pacman`, `snap`, `yay`, `yay-aur`, and `yum`.
 * `weather.py` - This script pulls weather data from [Weather API](https://weatherapi.com). You will need to get a free API key from this site to use it. The output shows location name, current temperature, and daily high and low temperatures.
 * `wifi-status.py` - This script uses `iwconfig` to display the current signal strength for the specified interface.
 
@@ -51,6 +51,20 @@ Glyphs and formatting noise have been removed for readbility's sake. In the last
 
 % ./scripts/filesystem-usage-formatted.py --mountpoint "/work" --format '{^used (or ^pct_used) out of ^total}' --unit Gi
 /work 1236.41 GiB (or 36%) out of 3666.49 GiB
+```
+
+## Permissions
+You will need to add yourself to `/etc/sudoers` in order to execute some commands. Do something like this. Obviously pick only the ones you need.
+```
+# mint has a wrapper in /usr/local/bin
+user ALL=(ALL) NOPASSWD: /usr/local/bin/apt
+user ALL=(ALL) NOPASSWD: /usr/bin/apt
+user ALL=(ALL) NOPASSWD: /usr/bin/dnf
+user ALL=(ALL) NOPASSWD: /usr/bin/flatpak
+user ALL=(ALL) NOPASSWD: /usr/bin/mintupdate-cli
+user ALL=(ALL) NOPASSWD: /usr/bin/snap
+user ALL=(ALL) NOPASSWD: /usr/bin/yay
+user ALL=(ALL) NOPASSWD: /usr/bin/yum
 ```
 
 ## Configuration
