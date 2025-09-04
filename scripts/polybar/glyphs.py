@@ -89,8 +89,9 @@ md_speedometer_medium = util.surrogatepass('\udb83\udf85')
 md_speedometer_fast   = util.surrogatepass('\udb81\udcc5')
 
 # Others
-cod_package        = util.surrogatepass('\ueb29')
-md_package_variant = util.surrogatepass('\udb80\udfd6')
+cod_package           = util.surrogatepass('\ueb29')
+fa_arrow_rotate_right = util.surrogatepass('\uf01e')
+md_package_variant    = util.surrogatepass('\udb80\udfd6')
 
 # Alerts
 md_alert               = util.surrogatepass('\udb80\udc26')
