@@ -8,7 +8,6 @@ I use [Xbar](https://xbarapp.com) and [SwiftBar](https://swiftbar.app) on my Mac
 * Clone this repository
 
 ## The scripts
-* `brew-outdated.py` - This script looks for outdated [linuxbrew](https://docs.brew.sh/Homebrew-on-Linux) casks and formulae and displays the count.
 * `cpu-usage.py` - This script shows CPU utilization in the format: `user 2.13%, sys 0.92%, idle 96.73%`. It relies on `mpstat` which is part of the `sysstat` package. If `mpstat` isn't available, you'll be asked to install `sysstat`.
 * `filesystem-usage.py` - This script shows disk usage in the format: `<used> GiB / <total> GiB`. This script uses `df -B 1` to gather the data.
 * `filesystem-usage-clickable.py` - This is a version of `filesystem-usage.py` that allows you to click on the item in the bar to cycle through several output formats.
@@ -180,5 +179,4 @@ env-type = "mintupdate"
 ```
 
 ## To Do
-* More supported platforms for `system-updates.py`
-
+* Figure out `custom/ipc` so scripts that do stuff in the background can show something like `Loading...`
