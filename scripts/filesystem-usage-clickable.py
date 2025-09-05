@@ -7,6 +7,7 @@ import json
 import os
 import re
 import sys
+import time
 
 class FilesystemInfo(NamedTuple):
     success    : Optional[bool]  = False
@@ -26,13 +27,13 @@ def get_disk_uuid(mountpoint: str='') -> str:
     # TARGET    SOURCE                      FSTYPE    OPTIONS
     # /         /dev/mapper/vgmint-root     ext4      rw,relatime,errors=remount-ro
     if rc == 0:
-        lines = stdout.strip().split('\n')
+        lines = stdout.split('\n')
         fs = re.split(r'\s+', lines[1])[1]
         if fs != '':
             rc, stdout, stderr = util.run_piped_command(f'blkid {fs}')
             # /dev/mapper/vgmint-root: UUID="6dc8d2cd-8977-4fa3-8357-23ced5f9dd4b" BLOCK_SIZE="4096" TYPE="ext4"
             if rc == 0:
-                match = re.search(r'UUID="([^"]+)"', stdout.strip())
+                match = re.search(r'UUID="([^"]+)"', stdout)
                 if match:
                     return match.group(1)
             else:
@@ -57,13 +58,6 @@ def get_statefile_name(mountpoint: str='') -> str:
         statefile_no_ext = os.path.splitext(statefile)[0]
         filename = os.path.join(util.get_home_directory(), f'.polybar-{statefile_no_ext}{mountpoint}-state')
         return filename
-
-def generate_toggle_script(args):
-    toggle_script = os.path.expanduser(args.toggle_script)
-    with open(toggle_script, 'w') as f:
-        f.write('#/bin/sh\n')
-        f.write(f'{f'{os.path.join(util.get_config_directory(), os.path.basename(__file__))}'} --mountpoint "{args.mountpoint}" --unit "{args.unit}" --toggle\n')
-    os.chmod(toggle_script, 0o755)
 
 def get_disk_usage(mountpoint: str) -> list:
     """
@@ -127,6 +121,7 @@ def get_disk_usage(mountpoint: str) -> list:
     return filesystem_info
 
 def main():
+    signal.signal(signal.SIGINT, signal_handler)
     mode_count = 3
     parser = argparse.ArgumentParser(description='Get disk info from df(1)')
     parser.add_argument('-m', '--mountpoint', help='The mountpoint to check', required=False)
@@ -134,21 +129,22 @@ def main():
     parser.add_argument('-n', '--name', help='For now we need to pass a friendly mountpoint name', required=False)
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
-    parser.add_argument('-d', '--daemon', action='store_true', help='Daemonize', required=False)
+    parser.add_argument('-d', '--daemonize', action='store_true', help='Daemonize', required=False)
     args = parser.parse_args()
 
-    statefile_name = get_statefile_name(mountpoint=args.mountpoint)
-    mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
-
     # Daemon mode: periodic updates
-    if args.daemon:
+    if args.daemonize:
         # Wait a bit to let Polybar fully initialize
         time.sleep(1)
         while True:
+            if not util.polybar_is_running():
+                sys.exit(0)
             _, _, _ = util.run_piped_command(f'polybar-msg action filesystem-usage-clickable-{args.name} hook 0')
             time.sleep(args.interval)
         sys.exit(0)
     else:
+        statefile_name = get_statefile_name(mountpoint=args.mountpoint)
+        mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
         disk_info = get_disk_usage(args.mountpoint)
 
         if disk_info.success:
