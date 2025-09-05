@@ -1,6 +1,6 @@
 from pathlib import Path
 from pprint import pprint as pp
-from typing import Optional
+from typing import List, Tuple, Optional, Union
 import json
 import os
 import shlex
@@ -11,7 +11,7 @@ import subprocess
 def pprint(input):
     pp(input)
 
-def run_piped_command(command: str):
+def run_piped_command_old(command: str=None):
     """
     Run a shell-like command with pipes using subprocess.
     Returns (return_code, stdout, stderr).
@@ -43,7 +43,55 @@ def run_piped_command(command: str):
     for p in processes[:-1]:
         p.wait()
 
-    return processes[-1].returncode, stdout.decode(), stderr.decode()
+    return processes[-1].returncode, stdout.decode().strip(), stderr.decode().strip()
+
+def run_piped_command(command: str=None, background: bool=False) -> Union[
+    Tuple[int, bytes, bytes],  # blocking mode
+    List[subprocess.Popen]     # background mode
+]:
+    """
+    Run a shell-like command with pipes using subprocess.
+
+    Args:
+        command (str): The pipeline command, e.g. "echo hi | grep h".
+        background (bool): If True, run in background (detached).
+
+    Returns:
+        - If background=False: (return_code, stdout, stderr)
+        - If background=True : list of Popen objects (pipeline)
+    """
+    # Split pipeline into stages
+    parts = [shlex.split(cmd.strip()) for cmd in command.split('|')]
+    processes = []
+    prev_stdout = None
+
+    for i, part in enumerate(parts):
+        proc = subprocess.Popen(
+            part,
+            stdin=prev_stdout,
+            stdout=subprocess.PIPE if not background else subprocess.DEVNULL,
+            stderr=subprocess.PIPE if not background and i == len(parts) - 1 else subprocess.DEVNULL,
+            preexec_fn=os.setpgrp if background else None
+        )
+        if prev_stdout:
+            prev_stdout.close()
+        prev_stdout = proc.stdout
+        processes.append(proc)
+
+    if background:
+        # Don't wait; return process list so caller can manage if needed
+        return processes
+
+    # Foreground (blocking) mode
+    stdout, stderr = processes[-1].communicate()
+    for p in processes[:-1]:
+        p.wait()
+
+    return processes[-1].returncode, stdout.decode().strip(), stderr.decode().strip()
+
+def polybar_is_running() -> bool:
+    rc, stdout, _ = run_piped_command('pgrep -x polybar')
+    return True if rc == 0 and stdout != '' else False
 
 def surrogatepass(code):
     return code.encode('utf-16', 'surrogatepass').decode('utf-16')
@@ -98,9 +146,10 @@ def byte_converter(number: int=0, unit: Optional[str] = None) -> str:
         return f'{pad_float(number / (divisor ** prefix_map[prefix]))} {unit}{suffix}'
 
 def file_exists(filename: str='') -> bool:
-    if os.path.exists(filename) and os.path.isfile(filename):
-        return True
-    return False
+    return True if (os.path.exists(filename) and os.path.isfile(filename)) else False
+
+def file_is_executable(filename: str='') -> bool:
+    return True if os.access(filename, os.X_OK) else False
 
 def get_home_directory() -> str:
     return Path.home()
@@ -110,7 +159,12 @@ def get_config_directory() -> str:
         Path.home(),
         '.config',
         'polybar',
-        'scripts'
+    )
+
+def get_script_directory() -> str:
+    return os.path.join(
+        get_config_directory(),
+        'scripts',
     )
 
 def parse_config_file(filename: str='', required_keys: list=[]):
