@@ -86,24 +86,27 @@ inherit = filesystem-base
 env-mountpoint = "/work"
 
 [filesystem-usage-clickable-base]
-type = custom/script
-interval = 2
-env-unit = "auto"
-exec = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint "$mountpoint" --unit "$unit" --toggle-script "$toggle_script"
+type = custom/ipc
+initial = 1
+label = %output%
 
 [module/filesystem-usage-clickable-root]
 inherit = filesystem-usage-clickable-base
-env-mountpoint = "/"
-env-unit = "auto"
-env-toggle_script = "/tmp/toggle-gdanko-root.sh"
-click-left = /tmp/toggle-gdanko-root.sh
+; How to use variables here?
+; env-mountpoint = /
+; env-unit = "auto"
+hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto
+click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto --toggle && polybar-msg action filesystem-usage-clickable-root hook 0
+exec = ~/.config/polybar/scripts/filesystem-usage-clickable.py --name root --daemon
 
 [module/filesystem-usage-clickable-work]
 inherit = filesystem-usage-clickable-base
-env-mountpoint = "/work"
-env-unit = "auto"
-env-toggle_script = "/tmp/toggle-gdanko-work.sh"
-click-left = /tmp/toggle-gdanko-work.sh
+; How to use variables here?
+; env-mountpoint = /work
+; env-unit = "auto"
+hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto
+click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto --toggle && polybar-msg action filesystem-usage-clickable-work hook 0
+exec = ~/.config/polybar/scripts/filesystem-usage-clickable.py --name work --daemon
 
 [module/memory-usage]
 type = custom/script
@@ -111,10 +114,12 @@ interval = 2
 exec = ~/.config/polybar/scripts/memory-usage.py
 
 [module/memory-usage-clickable]
-type = custom/script
-interval = 1
-exec = ~/.config/polybar/scripts/memory-usage-clickable.py
-click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --toggle
+type = custom/ipc
+label = %output%
+initial = 1
+hook-0 = ~/.config/polybar/scripts/memory-usage-clickable.py
+click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --toggle && polybar-msg action memory-usage-clickable hook 0
+exec = ~/.config/polybar/scripts/memory-usage-clickable.py --daemon
 
 [module/memory-usage-formatted]
 type = custom/script
