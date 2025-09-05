@@ -5,11 +5,7 @@ import argparse
 import os
 import re
 import sys
-
-# memory-usage-clickable
-# This is a version of the memory-usage.py script that has a > 1 output formats.
-# Clicking on the item in bar will toggle the output.
-# This is experimental!
+import time
 
 def get_statefile_name() -> str:
     statefile = os.path.basename(__file__)
@@ -68,31 +64,43 @@ def main():
     parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
     parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
+    parser.add_argument('-d', '--daemon', action='store_true', help='Daemonize', required=False)
     args = parser.parse_args()
 
     statefile_name = get_statefile_name()
-
-    memory_info = get_memory_usage()
     mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
 
-    if memory_info['success']:
-        pct_total = f'{memory_info["pct_total"]}%'
-        pct_used  = f'{memory_info["pct_used"]}%'
-        pct_free  = f'{memory_info["pct_free"]}%'
-        total     = util.byte_converter(number=memory_info['total'], unit=args.unit)
-        used      = util.byte_converter(number=memory_info['used'], unit=args.unit)
-        free      = util.byte_converter(number=memory_info['free'], unit=args.unit)
-
-        if mode == 0:
-            print(f'{util.color_title(glyphs.md_memory)} {used} / {total}')
-        elif mode == 1:
-            print(f'{util.color_title(glyphs.md_memory)} {pct_used} used')
-        elif mode == 2:
-            print(f'{util.color_title(glyphs.md_memory)} {used} used / {free} free')
+    # Daemon mode: periodic updates
+    if args.daemon:
+        # Wait a bit to let Polybar fully initialize
+        time.sleep(1)
+        while True:
+            _, _, _ = util.run_piped_command('polybar-msg action memory-usage-clickable hook 0')
+            time.sleep(2)
         sys.exit(0)
     else:
-        print(f'{util.color_title(glyphs.md_memory)} {util.color_error(memory_info['error'])}')
-        sys.exit(1)
+        memory_info = get_memory_usage()
+
+        if memory_info['success']:
+            pct_total = f'{memory_info["pct_total"]}%'
+            pct_used  = f'{memory_info["pct_used"]}%'
+            pct_free  = f'{memory_info["pct_free"]}%'
+            total     = util.byte_converter(number=memory_info['total'], unit=args.unit)
+            used      = util.byte_converter(number=memory_info['used'], unit=args.unit)
+            free      = util.byte_converter(number=memory_info['free'], unit=args.unit)
+
+            if mode == 0:
+                output = f'{util.color_title(glyphs.fa_memory)} {used} / {total}'
+            elif mode == 1:
+                output = f'{util.color_title(glyphs.fa_memory)} {pct_used} used'
+            elif mode == 2:
+                output = f'{util.color_title(glyphs.fa_memory)} {used} used / {free} free'
+            print(output)
+            sys.exit(0)
+        else:
+            output = f'{util.color_title(glyphs.fa_memory)} {util.color_error(memory_info['error'])}'
+            print(output)
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()

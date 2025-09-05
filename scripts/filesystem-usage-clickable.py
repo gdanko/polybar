@@ -7,11 +7,6 @@ import os
 import re
 import sys
 
-# disk-usage-clickable
-# This is a version of the disk-usage.py script that has a > 1 output formats.
-# Clicking on the item in bar will toggle the output.
-# This is experimental!
-
 def get_disk_uuid(mountpoint: str='') -> str:
     # Make this foolproof
     rc, stdout, stderr = util.run_piped_command(f'findmnt {mountpoint}')
@@ -59,7 +54,7 @@ def generate_toggle_script(args):
 
 def get_disk_usage(mountpoint: str) -> list:
     """
-    Execute df -k against a mount point and return a dictionary with its values
+    Execute df -B 1 against a mount point and return a dictionary with its values
     """
 
     if util.is_binary_installed('findmnt'):
@@ -112,42 +107,47 @@ def get_disk_usage(mountpoint: str) -> list:
 def main():
     mode_count = 3
     parser = argparse.ArgumentParser(description='Get disk info from df(1)')
-    parser.add_argument('-m', '--mountpoint', help='The mountpoint to check', required=True)
+    parser.add_argument('-m', '--mountpoint', help='The mountpoint to check', required=False)
     parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
+    parser.add_argument('-n', '--name', help='For now we need to pass a friendly mountpoint name', required=False)
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
-    parser.add_argument('-s', '--toggle-script', help='Filename of the 'click-left' toggle script, e.g., /tmp/toggle-{username}-{mountpoint}.sh', required=False)
+    parser.add_argument('-d', '--daemon', action='store_true', help='Daemonize', required=False)
     args = parser.parse_args()
 
     statefile_name = get_statefile_name(mountpoint=args.mountpoint)
-    disk_info = get_disk_usage(args.mountpoint)
+    mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
 
-    if args.toggle:
-        mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count)
-    else:
-        mode = state.read_state(statefile_name=statefile_name)
-        if not args.toggle_script:
-            print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(args.mountpoint)} {util.color_error("--toggle-script is required here")}')
-            sys.exit(1)
-        generate_toggle_script(args)
-
-    if disk_info['success']:
-        pct_total = f'{disk_info["pct_total"]}%'
-        pct_used  = f'{disk_info["pct_used"]}%'
-        pct_free  = f'{disk_info["pct_free"]}%'
-        total     = util.byte_converter(number=disk_info['total'], unit=args.unit)
-        used      = util.byte_converter(number=disk_info['used'], unit=args.unit)
-        free      = util.byte_converter(number=disk_info['free'], unit=args.unit)
-
-        if mode == 0:
-            print(f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {used} / {total}')
-        elif mode == 1:
-            print(f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {pct_used} used')
-        elif mode == 2:
-            print(f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {used} used / {free} free')
+    # Daemon mode: periodic updates
+    if args.daemon:
+        # Wait a bit to let Polybar fully initialize
+        time.sleep(1)
+        while True:
+            _, _, _ = util.run_piped_command(f'polybar-msg action filesystem-usage-clickable-{args.name} hook 0')
+            time.sleep(2)
         sys.exit(0)
     else:
-        print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(args.mountpoint)} {util.color_error(disk_info["error"])}')
-        sys.exit(1)
+        disk_info = get_disk_usage(args.mountpoint)
+
+        if disk_info['success']:
+            pct_total = f'{disk_info["pct_total"]}%'
+            pct_used  = f'{disk_info["pct_used"]}%'
+            pct_free  = f'{disk_info["pct_free"]}%'
+            total     = util.byte_converter(number=disk_info['total'], unit=args.unit)
+            used      = util.byte_converter(number=disk_info['used'], unit=args.unit)
+            free      = util.byte_converter(number=disk_info['free'], unit=args.unit)
+
+            if mode == 0:
+                output = f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {used} / {total}'
+            elif mode == 1:
+                output = f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {pct_used} used'
+            elif mode == 2:
+                output = f'{util.color_title(glyphs.md_harddisk)} {util.color_title(args.mountpoint)} {used} used / {free} free'
+            print(output)
+            sys.exit(0)
+        else:
+            output = f'{util.color_title(glyphs.md_harddisk)} {util.color_error(args.mountpoint)} {util.color_error(disk_info["error"])}'
+            print(output)
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()
