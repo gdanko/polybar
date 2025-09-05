@@ -83,9 +83,9 @@ def byte_converter(number: int=0, unit: Optional[str] = None) -> str:
     suffix = 'B'
 
     if unit == 'auto':
-        for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+        for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi']:
             if abs(number) < 1024.0:
-                return f'{round(number, 2)} {unit}{suffix}'
+                return f'{pad_float(number)} {unit}{suffix}'
             number = number / 1024
         return f'{pad_float(number)} Yi{suffix}'
     else:
