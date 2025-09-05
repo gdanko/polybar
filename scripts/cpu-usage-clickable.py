@@ -40,7 +40,7 @@ def get_cpu_type():
     command = 'grep -m 1 "model name" /proc/cpuinfo'
     rc, stdout, _ = util.run_piped_command(command)
     if rc == 0:
-        return re.split(r'\s*:\s*', stdout.strip())[1]
+        return re.split(r'\s*:\s*', stdout)[1]
     else:
         return 'Unknown CPU model'
 
@@ -50,7 +50,7 @@ def get_cpu_freq():
         command = f'{binary} | grep "CPU max MHz"'
         rc, stdout, _ = util.run_piped_command(command)
         if rc == 0:
-            bits = re.split(r'\s*:\s*', stdout.strip())
+            bits = re.split(r'\s*:\s*', stdout)
             if len(bits) == 2:
                 # error checking
                 freq = int(float(bits[1]))
@@ -69,7 +69,7 @@ def get_cpu_cores():
     command = 'grep -c ^processor /proc/cpuinfo'
     rc, stdout, _ = util.run_piped_command(command)
     if rc == 0 and stdout != '':
-        return int(stdout.strip())
+        return int(stdout)
 
     return -1
 
@@ -143,22 +143,22 @@ def main():
     parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
-    parser.add_argument('-d', '--daemon', action='store_true', help='Daemonize', required=False)
+    parser.add_argument('-d', '--daemonize', action='store_true', help='Daemonize', required=False)
     args = parser.parse_args()
 
-    statefile_name = get_statefile_name()
-    mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
-
     # Daemon mode: periodic updates
-    if args.daemon:
+    if args.daemonize:
         # Wait a bit to let Polybar fully initialize
-        # Handle CTRL-C
         time.sleep(1)
         while True:
+            if not util.polybar_is_running():
+                sys.exit(0)
             _, _, _ = util.run_piped_command('polybar-msg action cpu-usage-clickable hook 0')
             time.sleep(args.interval)
         sys.exit(0)
     else:
+        statefile_name = get_statefile_name()
+        mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
         cpu_info = get_cpu_info()
 
         if cpu_info.success:
