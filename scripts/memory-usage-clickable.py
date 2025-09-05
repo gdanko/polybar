@@ -64,6 +64,7 @@ def main():
     parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
     parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
+    parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
     parser.add_argument('-d', '--daemon', action='store_true', help='Daemonize', required=False)
     args = parser.parse_args()
 
@@ -76,7 +77,7 @@ def main():
         time.sleep(1)
         while True:
             _, _, _ = util.run_piped_command('polybar-msg action memory-usage-clickable hook 0')
-            time.sleep(2)
+            time.sleep(args.interval)
         sys.exit(0)
     else:
         memory_info = get_memory_usage()
