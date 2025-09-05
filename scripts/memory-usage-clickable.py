@@ -85,26 +85,28 @@ def get_memory_usage():
     return mem_info
 
 def main():
+    signal.signal(signal.SIGINT, signal_handler)
     mode_count = 3
     parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
     parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
-    parser.add_argument('-d', '--daemon', action='store_true', help='Daemonize', required=False)
+    parser.add_argument('-d', '--daemonize', action='store_true', help='Daemonize', required=False)
     args = parser.parse_args()
 
-    statefile_name = get_statefile_name()
-    mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
-
     # Daemon mode: periodic updates
-    if args.daemon:
+    if args.daemonize:
         # Wait a bit to let Polybar fully initialize
         time.sleep(1)
         while True:
+            if not util.polybar_is_running():
+                sys.exit(0)
             _, _, _ = util.run_piped_command('polybar-msg action memory-usage-clickable hook 0')
             time.sleep(args.interval)
         sys.exit(0)
     else:
+        statefile_name = get_statefile_name()
+        mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
         memory_info = get_memory_usage()
 
         if memory_info.success:
