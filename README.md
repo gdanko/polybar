@@ -97,7 +97,6 @@ inherit = filesystem-usage-clickable-base
 ; env-unit = "auto"
 hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto
 click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto --toggle && polybar-msg action filesystem-usage-clickable-root hook 0
-exec = ~/.config/polybar/scripts/filesystem-usage-clickable.py --name root --daemon
 
 [module/filesystem-usage-clickable-work]
 inherit = filesystem-usage-clickable-base
@@ -106,7 +105,6 @@ inherit = filesystem-usage-clickable-base
 ; env-unit = "auto"
 hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto
 click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto --toggle && polybar-msg action filesystem-usage-clickable-work hook 0
-exec = ~/.config/polybar/scripts/filesystem-usage-clickable.py --name work --daemon
 
 [module/memory-usage]
 type = custom/script
@@ -117,9 +115,8 @@ exec = ~/.config/polybar/scripts/memory-usage.py
 type = custom/ipc
 label = %output%
 initial = 1
-hook-0 = ~/.config/polybar/scripts/memory-usage-clickable.py
-click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --toggle && polybar-msg action memory-usage-clickable hook 0
-exec = ~/.config/polybar/scripts/memory-usage-clickable.py --daemon
+hook-0 = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto
+click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto --toggle && polybar-msg action memory-usage-clickable hook 0
 
 [module/memory-usage-formatted]
 type = custom/script
