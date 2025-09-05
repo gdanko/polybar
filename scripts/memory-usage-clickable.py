@@ -85,7 +85,6 @@ def get_memory_usage():
     return mem_info
 
 def main():
-    signal.signal(signal.SIGINT, signal_handler)
     mode_count = 3
     parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
     parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)

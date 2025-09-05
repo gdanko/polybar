@@ -121,7 +121,6 @@ def get_disk_usage(mountpoint: str) -> list:
     return filesystem_info
 
 def main():
-    signal.signal(signal.SIGINT, signal_handler)
     mode_count = 3
     parser = argparse.ArgumentParser(description='Get disk info from df(1)')
     parser.add_argument('-m', '--mountpoint', help='The mountpoint to check', required=False)
