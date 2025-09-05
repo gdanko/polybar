@@ -25,12 +25,18 @@ secondary = #8ABEB7
 alert = #A54242
 disabled = #707880
 
+;==========================================================
+;
+;   Bar configuration
+;
+;==========================================================
+
 [bar/top]
 width = 100%
 height = 16pt
 radius = 6
 
-; dpi = 96
+dpi = 0
 
 background = ${colors.background}
 foreground = ${colors.foreground}
@@ -45,13 +51,13 @@ padding-right = 1
 
 module-margin = 1
 
+monitor-strict = false
+
 separator = |
 separator-foreground = ${colors.disabled}
 
 ; Install nerd fonts like this
 ; https://gist.github.com/davidteren/898f2dcccd42d9f8680ec69a3a5d350e
-; font-N = <fontconfig pattern>;<vertical offset>
-
 ; You will need to download Arimo Nerd Font
 ; https://github.com/googlefonts/Arimo
 
@@ -60,15 +66,77 @@ font-1 = "Tamsyn:pixelsize=12;0"
 font-2 = "Noto Sans:size=11;1"
 font-3 = "Arimo Nerd Font:size=14;2"
 
-modules-left = 
-modules-right = network-throughput speedtest apt-updates brew-updates flatpak-updates mint-updates filesystem-usage-root filesystem-usage-work memory-usage cpu wlan-wlo1 weather-san-diego
+modules-left =
+modules-right = network-throughput speedtest filesystem-usage-clickable-root filesystem-usage-clickable-work memory-usage-clickable cpu wlan-wlo1 weather-san-diego
 
 cursor-click = pointer
 cursor-scroll = ns-resize
 
 enable-ipc = true
 
-; https://github.com/polybar/polybar/wiki/Configuration
+;==========================================================
+;
+;   Application settings
+;
+;==========================================================
+
+[settings]
+screenchange-reload = true
+pseudo-transparency = true
+
+;==========================================================
+;
+;   Module configuration
+;
+;==========================================================
+
+[module/ipc-test]
+type = custom/ipc
+
+; Define the command to be executed when the hook is triggered
+; Available tokens:
+;   %pid% (id of the parent polybar process)
+hook-0 = date
+hook-1 = whoami
+hook-2 = echo "Files in ${HOME}: $(ls -1a ~ | wc -l)"
+
+; Hook to execute on launch. The index is 1-based and using
+; the example below (2) `whoami` would be executed on launch.
+; If 0 is specified, no hook is run on launch
+; Default: 0
+
+; polybar-msg -p 42952 action ipc-test hook 0 
+; polybar-msg -p 42952 action ipc-test hook 1
+; polybar-msg -p 42952 action ipc-test hook 2
+; or
+; polybar-msg action ipc-test hook 0 
+; polybar-msg action ipc-test hook 1
+; polybar-msg action ipc-test hook 2
+;
+; send?
+; polybar-msg action "#ipc-test.send.asdf"
+
+; Format the output of individual hooks (replace i with the number of the hook)
+; Available tags:
+;   <label> (default)
+; New in version 3.7.0
+format-i = <label>
+
+; Available tokens:
+;   %output% (Output produced by the current hook)
+; New in version 3.7.0
+label = %output%
+
+; Let's try to use clicks to change stuff
+click-left   = polybar-msg action ipc-test hook 0
+click-middle = polybar-msg action ipc-test hook 1
+click-right  = polybar-msg action ipc-test hook 2
+
+; Hook to execute on launch. The index is 1-based and using
+; the example below (2) `whoami` would be executed on launch.
+; If 0 is specified, no hook is run on launch
+; Default: 0
+initial = 1
 
 [module/systray]
 type = internal/tray
@@ -84,21 +152,23 @@ exec = ~/.config/polybar/scripts/memory-usage.py
 [module/memory-usage-formatted]
 type = custom/script
 interval = 2
-env-format = "{^used! / ^total!}"
+env-format = "{^used / ^total}"
 env-unit = "auto"
 exec = ~/.config/polybar/scripts/memory-usage-formatted.py --format "$format" --unit "$unit"
 
 [module/memory-usage-clickable]
-type = custom/script
-interval = 1
-exec = ~/.config/polybar/scripts/memory-usage-clickable.py
-click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --toggle
+type = custom/ipc
+label = %output%
+initial = 1
+hook-0 = ~/.config/polybar/scripts/memory-usage-clickable.py
+click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --toggle && polybar-msg action memory-usage-clickable hook 0
+exec = ~/.config/polybar/scripts/memory-usage-clickable.py --daemon
 
 [filesystem-usage-base]
 type = custom/script
 interval = 2
 env-unit = "auto"
-exec = ~/.config/polybar/scripts/filesystem-usage-formatted.py --mountpoint "$mountpoint" --unit "$unit"
+exec = ~/.config/polybar/scripts/filesystem-usage.py --mountpoint "$mountpoint" --unit "$unit"
 
 [module/filesystem-usage-root]
 inherit = filesystem-usage-base
@@ -124,31 +194,27 @@ inherit = filesystem-usage-formatted-base
 env-mountpoint = "/work"
 
 [filesystem-usage-clickable-base]
-; click-left will not allow environment variables so we generate a script to call filesystem-usage-clickable.py with --toggle
-; this is a hack. Also, the updates are sadly not in real time, they instead are based on interval.
-type = custom/script
-interval = 2
-env-unit = "auto"
-exec = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint "$mountpoint" --unit "$unit" --toggle-script "$toggle_script"
+type = custom/ipc
+initial = 1
+label = %output%
 
 [module/filesystem-usage-clickable-root]
 inherit = filesystem-usage-clickable-base
-env-mountpoint = "/"
-env-unit = "auto"
-env-toggle_script = "~/.polybar-toggle-root.sh"
-click-left = ~/.polybar-toggle-root.sh
+; How to use variables here?
+; env-mountpoint = /
+; env-unit = "auto"
+hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto
+click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto --toggle && polybar-msg action filesystem-usage-clickable-root hook 0
+exec = ~/.config/polybar/scripts/filesystem-usage-clickable.py --name root --daemon
 
 [module/filesystem-usage-clickable-work]
 inherit = filesystem-usage-clickable-base
-env-mountpoint = "/work"
-env-unit = "auto"
-env-toggle_script = "~/.polybar-toggle-work.sh"
-click-left = ~/.polybar-toggle-work.sh
-
-[module/brew-outdated]
-type = custom/script
-interval = 1800
-exec = ~/.config/polybar/scripts/brew-outdated.py
+; How to use variables here?
+; env-mountpoint = /work
+; env-unit = "auto"
+hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto
+click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto --toggle && polybar-msg action filesystem-usage-clickable-work hook 0
+exec = ~/.config/polybar/scripts/filesystem-usage-clickable.py --name work --daemon
 
 [module/cpu]
 type = custom/script
@@ -164,6 +230,7 @@ label-disconnected = %{F#F0C674}%ifname%%{F#707880} disconnected
 
 [module/network-throughput]
 inherit = network-base
+interface = wlo1
 interval = 2
 interface-type = wireless
 label-connected = %{F#F0C674}%ifname%%{F-} %downspeed% RX / %upspeed% TX
@@ -179,7 +246,7 @@ env-interface = "wlo1"
 
 [weather-base]
 type = custom/script
-interval = 900 ; 15m
+interval = 900
 env-api_key = "<your_weather_api_key>"
 exec = ~/.config/polybar/scripts/weather.py --api-key "$api_key" --location "$location"
 
@@ -189,7 +256,7 @@ env-location = "San Diego, CA, US"
 
 [stocks-base]
 type = custom/script
-interval = 900 ; 15m
+interval = 900
 exec = ~/.config/polybar/scripts/stock-quotes.py --symbol "$symbol"
 
 [module/stocks-goog]
@@ -225,9 +292,3 @@ env-type = "flatpak"
 [module/mint-updates]
 inherit = system-updates-base
 env-type = "mintupdate"
-
-[settings]
-screenchange-reload = true
-pseudo-transparency = true
-
-; vim:ft=dosini
