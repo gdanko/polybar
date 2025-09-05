@@ -40,7 +40,7 @@ def find_apt_updates():
         command = f'sudo {binary} list --upgradable'
         rc, stdout, stderr = util.run_piped_command(command)
         if rc == 0:
-            lines = stdout.strip().split('\n')
+            lines = stdout.split('\n')
             # libegl-mesa0/noble-updates 25.0.7-0ubuntu0.24.04.2 amd64 [upgradable from: 25.0.7-0ubuntu0.24.04.1]
             for line in lines[1:]:
                 # bits = re.split(r'\s+', line)
@@ -160,7 +160,7 @@ def find_dnf_updates():
         command = f'sudo {binary} check-update'
         rc, stdout, stderr = util.run_piped_command(command)
         if rc == 0:
-            _, after = stdout.strip().split('Repositories loaded.', 1)
+            _, after = stdout.split('Repositories loaded.', 1)
             lines = after.lstrip().strip().split('\n')
             for line in lines:
                 bits = re.split(r'\s+', line)
@@ -178,9 +178,9 @@ def find_dnf_updates():
         data['error'] = f'{binary} is not installed'
 
     # This is here to test locally as I don't have dnf
-    # with open(os.path.join(util.get_config_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
+    # with open(os.path.join(util.get_script_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
     #     stdout = f.read()
-    #     _, after = stdout.strip().split('Repositories loaded.', 1)
+    #     _, after = stdout.split('Repositories loaded.', 1)
     #     lines = after.lstrip().strip().split('\n')
     #     for line in lines:
     #         bits = re.split(r'\s+', line)
@@ -216,7 +216,7 @@ def find_flatpak_updates():
         command = f'sudo {binary} remote-ls --updates --columns=name,version'
         rc, stdout, stderr = util.run_piped_command(command)
         if rc == 0:
-            lines = stdout.strip().split('\n')
+            lines = stdout.split('\n')
             for line in lines:
                 bits = re.split(r'\s+', line)
                 data['packages'].append(
@@ -250,7 +250,7 @@ def find_mint_updates():
         command = f'sudo {binary} list -r'
         rc, stdout, stderr = util.run_piped_command(command)
         if rc == 0:
-            lines = stdout.strip().split('\n')
+            lines = stdout.split('\n')
             for line in lines:
                 bits = re.split(r'\s+', line)
                 data['packages'].append(
@@ -284,7 +284,7 @@ def find_pacman_updates():
         command = f'sudo {binary} -Qu'
         rc, stdout, stderr = util.run_piped_command(command)
         if rc == 0:
-            _, after = stdout.strip().split(':: Checking for updates...', 1)
+            _, after = stdout.split(':: Checking for updates...', 1)
             lines = after.lstrip().strip().split('\n')
             for line in lines:
                 bits = re.split(r'\s+', line)
@@ -303,9 +303,9 @@ def find_pacman_updates():
         data['error'] = f'{binary} is not installed'
 
     # This is here to test locally as I don't have pacman
-    # with open(os.path.join(util.get_config_directory(), 'pacman-output.txt'), 'r', encoding='utf-8') as f:
+    # with open(os.path.join(util.get_script_directory(), 'pacman-output.txt'), 'r', encoding='utf-8') as f:
     #     stdout = f.read()
-    #     _, after = stdout.strip().split(':: Checking for updates...', 1)
+    #     _, after = stdout.split(':: Checking for updates...', 1)
     #     lines = after.lstrip().strip().split('\n')
     #     for line in lines:
     #         bits = re.split(r'\s+', line)
@@ -352,7 +352,7 @@ def find_snap_updates():
         data['error'] = f'{binary} is not installed'
 
     # This is here to test locally as I don't have yum
-    # with open(os.path.join(util.get_config_directory(), 'snap-output.txt'), 'r', encoding='utf-8') as f:
+    # with open(os.path.join(util.get_script_directory(), 'snap-output.txt'), 'r', encoding='utf-8') as f:
     #     stdout = f.read()
     #     lines = stdout.lstrip().strip().split('\n')
     #     for line in lines[1:]:
@@ -382,7 +382,7 @@ def find_yay_updates(aur: bool=False):
         command = f'sudo {binary} -Qua'
         rc, stdout, stderr = util.run_piped_command(command)
         if rc == 0:
-            _, after = stdout.strip().split(':: Checking for updates...', 1)
+            _, after = stdout.split(':: Checking for updates...', 1)
             lines = after.lstrip().strip().split('\n')
 
             if aur:
@@ -407,9 +407,9 @@ def find_yay_updates(aur: bool=False):
         data['error'] = f'{binary} is not installed'
 
     # This is here to test locally as I don't have yay
-    # with open(os.path.join(util.get_config_directory(), 'yay-output.txt'), 'r', encoding='utf-8') as f:
+    # with open(os.path.join(util.get_script_directory(), 'yay-output.txt'), 'r', encoding='utf-8') as f:
     #     stdout = f.read()
-    #     _, after = stdout.strip().split(':: Checking for updates...', 1)
+    #     _, after = stdout.split(':: Checking for updates...', 1)
     #     lines = after.lstrip().strip().split('\n')
 
     #     if aur:
@@ -452,7 +452,7 @@ def find_yum_updates():
         command = f'sudo {binary} check-update'
         rc, stdout, stderr = util.run_piped_command(command)
         if rc == 0:
-            _, after = stdout.strip().split('Repositories loaded.', 1)
+            _, after = stdout.split('Repositories loaded.', 1)
             lines = after.lstrip().strip().split('\n')
             for line in lines:
                 bits = re.split(r'\s+', line)
@@ -470,9 +470,9 @@ def find_yum_updates():
         data['error'] = f'{binary} is not installed'
 
     # This is here to test locally as I don't have yum
-    # with open(os.path.join(util.get_config_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
+    # with open(os.path.join(util.get_script_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
     #     stdout = f.read()
-    #     _, after = stdout.strip().split('Repositories loaded.', 1)
+    #     _, after = stdout.split('Repositories loaded.', 1)
     #     lines = after.lstrip().strip().split('\n')
     #     for line in lines:
     #         bits = re.split(r'\s+', line)
