@@ -67,7 +67,7 @@ font-2 = "Noto Sans:size=11;1"
 font-3 = "Arimo Nerd Font:size=14;2"
 
 modules-left =
-modules-right = network-throughput polybar-speedtest filesystem-usage-clickable-root filesystem-usage-clickable-work memory-usage-clickable cpu-usage-clickable wlan-wlo1 weather-san-diego
+modules-right = network-throughput wlan-wlo1 polybar-speedtest filesystem-usage-clickable-root filesystem-usage-clickable-work memory-usage-clickable swap-usage-clickable cpu-usage-clickable weather-san-diego
 
 cursor-click = pointer
 cursor-scroll = ns-resize
@@ -200,6 +200,7 @@ daemonize-arg-interval = 2
 [network-base]
 type = internal/network
 interval = 5
+format = <label>
 format-connected = <label-connected>
 format-disconnected = <label-disconnected>
 label-disconnected = %{F#F0C674}%ifname%%{F#707880} disconnected
@@ -242,6 +243,31 @@ env-symbol = "GOOG"
 [module/stocks-now]
 inherit = stocks-base
 env-symbol = "NOW"
+
+;==========================================================
+;  Swap
+;==========================================================
+
+[module/swap-usage]
+type = custom/script
+interval = 2
+exec = ~/.config/polybar/scripts/swap-usage.py
+
+[module/swap-usage-formatted]
+type = custom/script
+interval = 2
+env-format = "{^used / ^total}"
+env-unit = "auto"
+exec = ~/.config/polybar/scripts/swap-usage-formatted.py --format "$format" --unit "$unit"
+
+[module/swap-usage-clickable]
+type = custom/ipc
+label = %output%
+initial = 1
+hook-0 = ~/.config/polybar/scripts/swap-usage-clickable.py --unit auto
+click-left = ~/.config/polybar/scripts/swap-usage-clickable.py --unit auto --toggle && polybar-msg action swap-usage-clickable hook 0
+daemonize = true
+daemonize-arg-interval = 2
 
 ;==========================================================
 ;  System Updates
