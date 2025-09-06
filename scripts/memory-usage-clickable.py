@@ -12,6 +12,8 @@ class MemoryInfo(NamedTuple):
     success   : Optional[bool]  = False
     error     : Optional[str]   = None
     total     : Optional[int]   = 0
+    used      : Optional[int]   = 0
+    free      : Optional[int]   = 0
     shared    : Optional[int]   = 0
     buffers   : Optional[int]   = 0
     cache     : Optional[int]   = 0
@@ -19,9 +21,6 @@ class MemoryInfo(NamedTuple):
     pct_total : Optional[int]   = 0
     pct_used  : Optional[int]   = 0
     pct_free  : Optional[int]   = 0
-    total     : Optional[int]   = 0
-    used      : Optional[int]   = 0
-    free      : Optional[int]   = 0
 
 def get_statefile_name() -> str:
     statefile = os.path.basename(__file__)
@@ -33,10 +32,11 @@ def get_statefile_name() -> str:
 
 def get_memory_usage():
     """
-    Execute free -b -w and return a dictionary with its values
+    Execute free -b -w and return a namedtuple with its values
     """
 
-    rc, stdout, stderr = util.run_piped_command('free -b -w | sed -n "2p"')
+    command = 'free -b -w | sed -n "2p"'
+    rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
         if stdout != '':
             values    = re.split(r'\s+', stdout)
@@ -64,7 +64,6 @@ def get_memory_usage():
                 used      = used,
                 free      = free,
             )
-
         else:
             mem_info = MemoryInfo(
                 success = False,
@@ -79,7 +78,7 @@ def get_memory_usage():
         else:
             mem_info = MemoryInfo(
                 success = False,
-                error   = 'non-zero exit code',
+                error   = f'failed to execute {command}',
             )
 
     return mem_info
