@@ -104,20 +104,22 @@ def find_enabled_modules() -> list:
 
 def kill_if_running(ps_command_string: str=None):
     command = f'pgrep -f "{ps_command_string}"'
-    rc, pid, stderr = util.run_piped_command(command)
-    if rc == 0 and pid != '':
-        logging.debug(f'Attempting to kill "{ps_command_string}" (pid {pid})')
-        command = f'kill {pid}'
-        rc, _, stderr = util.run_piped_command(command)
-        if rc == 0:
-            return
-        else:
-            if stderr:
-                logging.error(f'Failed to kill pid {pid}: {stderr}')
-                sys.exit(1)
-            else:
-                logging.error(f'Failed to kill pid {pid}: Unknown error')
-                sys.exit(1)
+    rc, stdout, stderr = util.run_piped_command(command)
+    if rc == 0 and stdout != '':
+        pids = stdout.split('\n')
+        if len(pids) > 1:
+            logging.warning(f'There are {len(pids)} instances of "{ps_command_string}" running')
+        for pid in pids:
+            logging.debug(f'Attempting to kill "{ps_command_string}" (pid {pid})')
+            command = f'kill {pid}'
+            rc, _, stderr = util.run_piped_command(command)
+            if rc != 0:
+                if stderr:
+                    logging.error(f'Failed to kill pid {pid}: {stderr}')
+                    sys.exit(1)
+                else:
+                    logging.error(f'Failed to kill pid {pid}: Unknown error')
+                    sys.exit(1)
     else:
         return
 
@@ -144,7 +146,7 @@ def daemonize(module_name: str=None, script_name: str=None, polybar_config=None)
     command_bits = [ script_name ]
 
     if not 'daemonize' in module_config or ('daemonize' in module_config and module_config['daemonize'] == False):
-        logging.warn(f'The module {module_name} cannot be daemonized due to a configuration setting')
+        logging.warning(f'The module {module_name} cannot be daemonized due to a configuration setting')
         return
 
     for key, value in module_config.items():
