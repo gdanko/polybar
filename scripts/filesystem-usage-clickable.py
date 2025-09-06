@@ -125,7 +125,7 @@ def main():
     parser = argparse.ArgumentParser(description='Get disk info from df(1)')
     parser.add_argument('-m', '--mountpoint', help='The mountpoint to check', required=False)
     parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
-    parser.add_argument('-n', '--name', help='For now we need to pass a friendly mountpoint name', required=False)
+    parser.add_argument('-l', '--label', help='For now we need to pass a friendly mountpoint label', required=False)
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
     parser.add_argument('-d', '--daemonize', action='store_true', help='Daemonize', required=False)
@@ -138,7 +138,7 @@ def main():
         while True:
             if not util.polybar_is_running():
                 sys.exit(0)
-            _, _, _ = util.run_piped_command(f'polybar-msg action filesystem-usage-clickable-{args.name} hook 0')
+            _, _, _ = util.run_piped_command(f'polybar-msg action filesystem-usage-clickable-{args.label} hook 0')
             time.sleep(args.interval)
         sys.exit(0)
     else:
