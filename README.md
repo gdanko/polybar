@@ -66,7 +66,7 @@ daemonize-arg-interval = 2
 ```
 When the module is executed, `hook-0` is called, which simply displays the default output. The `click-left` action executes the script with `--toggle`, which updates the output format via state file. It also displays the output in the new format.
 
-To accomplish executing these scripts on an interval, I've added two flags, `--daemonize` and `--interval`. The `daemonize-*` parameters are parsed by `launch.py` (which is invoked by the required `launch.sh`). There is logic to manage these scripts so that there aren't multiple copies of them running, etc. Anyhow, when `launch.py` is executed, there is a function that daemonizes the modules that are currently support this. In a future release, `launch.py` will do this without them being hardcoded.
+To accomplish executing these scripts on an interval, I've added two flags, `--daemonize` and `--interval`. The `daemonize-*` parameters are parsed by `launch.py` (which is invoked by the required `launch.sh`). There is logic to manage these scripts so that there aren't multiple copies of them running, etc. Anyhow, when `launch.py` is executed, there is a function that daemonizes the modules that currently support this. In a future release, `launch.py` will do this without them being hardcoded.
 
 Upon invocation, `launch.py` does the following:
 1. Configures the logger
