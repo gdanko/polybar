@@ -167,24 +167,19 @@ def daemonize(module_name: str=None, script_name: str=None, polybar_config=None)
 
 def daemonize_processes(polybar_config=None):
     enabled_modules = find_enabled_modules()
-    
-    module_name = 'cpu-usage-clickable'
-    if module_name in enabled_modules:
-        daemonize(module_name=module_name, polybar_config=polybar_config)
-    
-    module_name = 'memory-usage-clickable'
-    if module_name in enabled_modules:
-        daemonize(module_name=module_name, polybar_config=polybar_config)
-    
+
+    # Standard modules
+    standard_modules = ['cpu-usage-clickable', 'memory-usage-clickable', 'swap-usage-clickable', 'polybar-speedtest']
+    for module_name in standard_modules:
+        if module_name in enabled_modules:
+            daemonize(module_name=module_name, polybar_config=polybar_config)
+
+    # Non-standard modules
     module_name = 'filesystem-usage-clickable'
     script_name = os.path.join(util.get_script_directory(), f'{module_name}.py')
     filesystems = [module for module in enabled_modules if module.startswith('filesystem-usage-clickable-')]
     for filesystem in filesystems:
         daemonize(module_name=filesystem, script_name=script_name, polybar_config=polybar_config)
-
-    module_name = 'polybar-speedtest'
-    if module_name in enabled_modules:
-        daemonize(module_name=module_name, polybar_config=polybar_config)
 
 def main():
     debug = True
