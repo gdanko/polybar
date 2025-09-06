@@ -134,6 +134,7 @@ def main():
     cpu_usage_interval = 2
     filesystem_usage_interval = 2
     memory_usage_interval = 2
+    polybar_speedtest_interval = 15
     enabled_modules = find_enabled_modules()
 
     polybar_config = parse_config(filename=polybar_config_file)
@@ -167,6 +168,13 @@ def main():
         script_name = os.path.join(polybar_scripts, f'{module_name}.py')
         script_exists_and_is_executable(script_name=script_name)
         command = f'{script_name} --name {name} --interval {filesystem_usage_interval} --daemonize'
+        daemonize(script_name=script_name, command=command)
+
+    module_name = 'polybar-speedtest'
+    if module_name in enabled_modules:
+        script_name = os.path.join(polybar_scripts, f'{module_name}.py')
+        script_exists_and_is_executable(script_name=script_name)
+        command = f'{script_name} --upload --download --interval {polybar_speedtest_interval} --daemonize'
         daemonize(script_name=script_name, command=command)
 
 if __name__ == '__main__':
