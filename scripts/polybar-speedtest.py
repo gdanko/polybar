@@ -5,6 +5,7 @@ import argparse
 import importlib
 import os
 import sys
+import time
 
 try:
     import speedtest
@@ -21,7 +22,7 @@ def get_icon(speed: float=0.0) -> str:
     elif speed >= 500000000:
         return glyphs.md_speedometer_fast
 
-def main():
+def execute_tests(args):
     speedtest_data = {
         'down': {
             'success': False,
@@ -37,16 +38,6 @@ def main():
 
     errors = []
     tester = speedtest.Speedtest(secure=True)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--download', action='store_true', help='Test upload speed', required=False)
-    parser.add_argument('--upload', action='store_true', help='Test upload speed', required=False)
-    parser.add_argument('--bytes', action='store_true', help='Use bytes instead of bits')
-    args = parser.parse_args()
-
-    if not args.download and not args.upload:
-        print(f'{util.color_title(glyphs.md_speedometer_slow)} {util.color_error("please specify --download and/or --upload")}')
-        sys.exit(1)
 
     if args.download:
         try:
@@ -71,10 +62,6 @@ def main():
     if speedtest_data['up']['success']:
         output.append(f'{glyphs.cod_arrow_small_up}{util.network_speed(tester.results.upload, args.bytes)}')
 
-    if len(output) == 0:
-         print(f'{util.color_title(glyphs.md_speedometer_fast)} {util.color_error('All tests failed')}')
-         sys.exit(1)
-
     # Determine the icon based on average up/down speed
     if speedtest_data['down']['success'] and speedtest_data['up']['success']:
         icon = get_icon( (speedtest_data['down']['speed'] + speedtest_data['up']['speed']) / 2 )
@@ -85,12 +72,45 @@ def main():
     elif not speedtest_data['down']['success'] and speedtest_data['up']['success']:
         icon = get_icon( speedtest_data['up']['speed'] )
 
-    if len(output) > 0:
-        print(f'{util.color_title(icon)} {' '.join(output)}')
-        sys.exit(0)
-    else:
-        print(f'{util.color_title(icon)} {util.color_error('All tests failed')}')
+    return output, errors, icon
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--download', action='store_true', help='Test upload speed', required=False)
+    parser.add_argument('--upload', action='store_true', help='Test upload speed', required=False)
+    parser.add_argument('--bytes', action='store_true', help='Use bytes instead of bits')
+    parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
+    parser.add_argument('-d', '--daemonize', action='store_true', help='Daemonize', required=False)
+    args = parser.parse_args()
+
+    if not args.download and not args.upload:
+        print(f'{util.color_title(glyphs.md_speedometer_slow)} {util.color_error("please specify --download and/or --upload")}')
         sys.exit(1)
+
+    # Daemon mode: periodic updates
+    if args.daemonize:
+        # Wait a bit to let Polybar fully initialize
+        time.sleep(1)
+        while True:
+            if not util.polybar_is_running():
+                sys.exit(0)
+            loading = f'{util.color_title(glyphs.fa_arrow_rotate_right)} Speedtest running...'
+            _, _, _ = util.run_piped_command(f'polybar-msg action "#speedtest.send.{loading}"')
+            test_data, errors, icon = execute_tests(args)
+            if len(test_data) > 0:
+                output = f'{util.color_title(icon)} {' '.join(test_data)}'
+            else:
+                output = f'{util.color_title(icon)} {util.color_error('All tests failed')}'
+            _, _, _ = util.run_piped_command(f'polybar-msg action "#speedtest.send.{output}"')
+            time.sleep(args.interval)
+    else:
+        test_data, errors, icon = execute_tests(args)
+        if len(test_data) > 0:
+            print(f'{util.color_title(icon)} {' '.join(test_data)}')
+            sys.exit(0)
+        else:
+            print(f'{util.color_title(icon)} {util.color_error('All tests failed')}')
+            sys.exit(1)
 
 if __name__ == '__main__':
     main()
