@@ -134,7 +134,7 @@ def main():
     cpu_usage_interval = 2
     filesystem_usage_interval = 2
     memory_usage_interval = 2
-    polybar_speedtest_interval = 15
+    polybar_speedtest_interval = 300
     enabled_modules = find_enabled_modules()
 
     polybar_config = parse_config(filename=polybar_config_file)
