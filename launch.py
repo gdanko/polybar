@@ -36,7 +36,7 @@ def initialize():
 
 def parse_config(filename: str=None):
     try:
-        parser = configparser.ConfigParser()
+        parser = configparser.ConfigParser(interpolation=None)
         parser.read(filename)
     except:
         logging.error(f'Failed to parse the config file {filename}')
@@ -121,8 +121,9 @@ def kill_if_running(ps_command_string: str=None):
     else:
         return
 
-def daemonize(module_name: str=None, args: dict={}):
-    script_name = os.path.join(util.get_script_directory(), f'{module_name}.py')
+def daemonize(module_name: str=None, script_name: str=None, polybar_config=None):
+    if not script_name:
+        script_name = os.path.join(util.get_script_directory(), f'{module_name}.py')
 
     if not util.file_exists(script_name):
         logging.error(f'The script {script_name} doesn\'t exist')
@@ -132,13 +133,26 @@ def daemonize(module_name: str=None, args: dict={}):
         logging.error(f'The script {script_name} isn\'t executable')
         sys.exit(1)
 
+    try:
+        module_config = dict(polybar_config[f'module/{module_name}'])
+        if 'daemonize' in module_config:
+            module_config['daemonize'] = True if module_config['daemonize'] == 'true' else False
+    except Exception as e:
+        logging.error(f'Failed to parse the configuration for module/{module_name}: {e}')
+        sys.exit(1)
+
     command_bits = [ script_name ]
-    for flag, value in args.items():
-        command_bits.append(flag)
-        if value:
-            command_bits.append(value)
+
+    if not 'daemonize' in module_config or ('daemonize' in module_config and module_config['daemonize'] == False):
+        logging.warn(f'The module {module_name} cannot be daemonized due to a configuration setting')
+        return
+
+    for key, value in module_config.items():
+        if key.startswith('daemonize-arg-'):
+            command_bits.append(f'--{key.split('-')[2]}')
+            if value and value != '':
+                command_bits.append(value)
     command_bits.append('--daemonize')
-    
     command = ' '.join(command_bits)
     ps_command_string = f'python3 {command}'
 
@@ -151,45 +165,26 @@ def daemonize(module_name: str=None, args: dict={}):
         logging.error(f'Failed to execute {command}: {e}')
         sys.exit(1)
 
-def daemonize_processes():
-    # Now we need to daemonize those plugins that need daemonizing
+def daemonize_processes(polybar_config=None):
     enabled_modules = find_enabled_modules()
-
+    
     module_name = 'cpu-usage-clickable'
-    cpu_usage_interval = 2
     if module_name in enabled_modules:
-        daemonize(module_name,
-        {
-            '--interval': str(cpu_usage_interval),
-        })
+        daemonize(module_name=module_name, polybar_config=polybar_config)
     
     module_name = 'memory-usage-clickable'
-    memory_usage_interval = 2
     if module_name in enabled_modules:
-        daemonize(module_name,
-        {
-            '--interval' : str(memory_usage_interval),
-        })
-    
-    module_name = 'polybar-speedtest'
-    polybar_speedtest_interval = 300
-    if module_name in enabled_modules:
-        daemonize(module_name,
-        {
-            '--upload'   : None,
-            '--download' : None,
-            '--interval' : str(polybar_speedtest_interval),
-        })
+        daemonize(module_name=module_name, polybar_config=polybar_config)
     
     module_name = 'filesystem-usage-clickable'
-    filesystem_usage_interval = 2
+    script_name = os.path.join(util.get_script_directory(), f'{module_name}.py')
     filesystems = [module for module in enabled_modules if module.startswith('filesystem-usage-clickable-')]
     for filesystem in filesystems:
-        daemonize(module_name,
-        {
-            '--name'     : filesystem.split('-')[3],
-            '--interval' : str(filesystem_usage_interval),
-        })
+        daemonize(module_name=filesystem, script_name=script_name, polybar_config=polybar_config)
+
+    module_name = 'polybar-speedtest'
+    if module_name in enabled_modules:
+        daemonize(module_name=module_name, polybar_config=polybar_config)
 
 def main():
     debug = True
@@ -207,7 +202,7 @@ def main():
     
     kill_polybar_if_running(ipc_enabled=ipc_enabled)
     launch_polybar(bar_name=bar_name)
-    daemonize_processes()
+    daemonize_processes(polybar_config=polybar_config)
 
 if __name__ == '__main__':
     main()
