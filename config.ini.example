@@ -90,30 +90,27 @@ pseudo-transparency = true
 ;
 ;==========================================================
 
-[module/systray]
-type = internal/tray
+;==========================================================
+;  CPU
+;==========================================================
 
-format-margin = 8pt
-tray-spacing = 16pt
-
-[module/memory-usage]
+[module/cpu-usage]
 type = custom/script
 interval = 2
-exec = ~/.config/polybar/scripts/memory-usage.py
+exec = ~/.config/polybar/scripts/cpu-usage.py
 
-[module/memory-usage-formatted]
-type = custom/script
-interval = 2
-env-format = "{^used / ^total}"
-env-unit = "auto"
-exec = ~/.config/polybar/scripts/memory-usage-formatted.py --format "$format" --unit "$unit"
-
-[module/memory-usage-clickable]
+[module/cpu-usage-clickable]
 type = custom/ipc
 label = %output%
 initial = 1
-hook-0 = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto
-click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto --toggle && polybar-msg action memory-usage-clickable hook 0
+hook-0 = ~/.config/polybar/scripts/cpu-usage-clickable.py
+click-left = ~/.config/polybar/scripts/cpu-usage-clickable.py --toggle && polybar-msg action cpu-usage-clickable hook 0
+daemonize = true
+daemonize-arg-interval = 2
+
+;==========================================================
+;  Filesystem
+;==========================================================
 
 [filesystem-usage-base]
 type = custom/script
@@ -156,6 +153,9 @@ inherit = filesystem-usage-clickable-base
 ; env-unit = "auto"
 hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto
 click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto --toggle && polybar-msg action filesystem-usage-clickable-root hook 0
+daemonize = true
+daemonize-arg-label = root
+daemonize-arg-interval = 2
 
 [module/filesystem-usage-clickable-work]
 inherit = filesystem-usage-clickable-base
@@ -164,18 +164,38 @@ inherit = filesystem-usage-clickable-base
 ; env-unit = "auto"
 hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto
 click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto --toggle && polybar-msg action filesystem-usage-clickable-work hook 0
+daemonize = true
+daemonize-arg-label = work
+daemonize-arg-interval = 2
 
-[module/cpu-usage]
+;==========================================================
+;  Memory
+;==========================================================
+
+[module/memory-usage]
 type = custom/script
 interval = 2
-exec = ~/.config/polybar/scripts/cpu-usage.py
+exec = ~/.config/polybar/scripts/memory-usage.py
 
-[module/cpu-usage-clickable]
+[module/memory-usage-formatted]
+type = custom/script
+interval = 2
+env-format = "{^used / ^total}"
+env-unit = "auto"
+exec = ~/.config/polybar/scripts/memory-usage-formatted.py --format "$format" --unit "$unit"
+
+[module/memory-usage-clickable]
 type = custom/ipc
 label = %output%
 initial = 1
-hook-0 = ~/.config/polybar/scripts/cpu-usage-clickable.py
-click-left = ~/.config/polybar/scripts/cpu-usage-clickable.py --toggle && polybar-msg action cpu-usage-clickable hook 0
+hook-0 = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto
+click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto --toggle && polybar-msg action memory-usage-clickable hook 0
+daemonize = true
+daemonize-arg-interval = 2
+
+;==========================================================
+;  Network
+;==========================================================
 
 [network-base]
 type = internal/network
@@ -191,24 +211,24 @@ interval = 2
 interface-type = wireless
 label-connected = %{F#F0C674}%ifname%%{F-} %downspeed% RX / %upspeed% TX
 
-[wlan-base]
-type = custom/script
-interval = 2
-exec = ~/.config/polybar/scripts/wifi-status.py --interface "$interface"
+;==========================================================
+;  Polybar Speedtest
+;==========================================================
 
-[module/wlan-wlo1]
-inherit = wlan-base
-env-interface = "wlo1"
+[module/polybar-speedtest]
+; This is launched and daemonized by launch.py so we don't do anything here
+type = custom/ipc
+label = %output%
+initial = 1
+hook-0 = echo "%{F#F0C674}%{F-} Speedtest running..."
+daemonize = true
+daemonize-arg-download =
+daemonize-arg-upload =
+daemonize-arg-interval = 300
 
-[weather-base]
-type = custom/script
-interval = 900
-env-api_key = "<your_weather_api_key>"
-exec = ~/.config/polybar/scripts/weather.py --api-key "$api_key" --location "$location"
-
-[module/weather-san-diego]
-inherit = weather-base
-env-location = "San Diego, CA, US"
+;==========================================================
+;  Stocks
+;==========================================================
 
 [stocks-base]
 type = custom/script
@@ -223,12 +243,9 @@ env-symbol = "GOOG"
 inherit = stocks-base
 env-symbol = "NOW"
 
-[module/polybar-speedtest]
-; This is launched and daemonized by launch.py so we don't do anything here
-type = custom/ipc
-label = %output%
-initial = 1
-hook-0 = echo "%{F#F0C674}%{F-} Speedtest running..."
+;==========================================================
+;  System Updates
+;==========================================================
 
 [system-updates-base]
 type = custom/script
@@ -250,3 +267,40 @@ env-type = "flatpak"
 [module/mint-updates]
 inherit = system-updates-base
 env-type = "mintupdate"
+
+;==========================================================
+;  Systray
+;==========================================================
+
+[module/systray]
+type = internal/tray
+
+format-margin = 8pt
+tray-spacing = 16pt
+
+;==========================================================
+;  Weather
+;==========================================================
+
+[weather-base]
+type = custom/script
+interval = 900
+env-api_key = "<your_weather_api_key>"
+exec = ~/.config/polybar/scripts/weather.py --api-key "$api_key" --location "$location"
+
+[module/weather-san-diego]
+inherit = weather-base
+env-location = "San Diego, CA, US"
+
+;==========================================================
+;  WLAN
+;==========================================================
+
+[wlan-base]
+type = custom/script
+interval = 2
+exec = ~/.config/polybar/scripts/wifi-status.py --interface "$interface"
+
+[module/wlan-wlo1]
+inherit = wlan-base
+env-interface = "wlo1"
