@@ -169,19 +169,5 @@ def main():
         command = f'{script_name} --name {name} --interval {filesystem_usage_interval} --daemonize'
         daemonize(script_name=script_name, command=command)
 
-    # FILESYSTEMS_LEFT=($(echo $MODULES_LEFT | grep -o 'filesystem-usage-clickable[^ ]*'))
-    # FILESYSTEMS_RIGHT=($(echo $MODULES_RIGHT | grep -o 'filesystem-usage-clickable[^ ]*'))
-    # FILESYSTEMS=("${FILESYSTEMS_LEFT[@]}" "${FILESYSTEMS_RIGHT[@]}")
-
-    # if [ ${#FILESYSTEMS[@]} -gt 0 ]; then
-    #     for FILESYSTEM in "${FILESYSTEMS[@]}"; do
-    #         NAME=$(echo ${FILESYSTEM} | awk -F "-" '{print $4}')
-    #         SCRIPT_NAME="${POLYBAR_SCRIPTS}/filesystem-usage-clickable.py"
-    #         if [ -f "${SCRIPT_NAME}" ]; then
-    #             "${SCRIPT_NAME}" --name ${NAME} --interval ${FILESYSTEM_USAGE_INTERVAL} --daemon
-    #         fi
-    #     done
-    # fi
-
 if __name__ == '__main__':
     main()
