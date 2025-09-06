@@ -25,7 +25,7 @@ I use [Xbar](https://xbarapp.com) and [SwiftBar](https://swiftbar.app) on my Mac
 * The `filesystem-usage*.py` and `memory-usage*.py` scripts have a `--unit` flag that allows you to force the unit the output is displayed in.
 * Valid units for the `--unit` flag are `K, Ki, M, Mi, G, Gi, T, Ti, P, Pi, E, Ei, Z, Zi, auto` with the default being `auto`.
 * The `auto` option will intelligently determine which unit to use, depending on the number. For example, if you're using 50.2 GiB on a 4 TiB drive, `auto` would render the output to look like this `50.2 GiB / 4.0 TiB`, where selecting the `Ti` unit would give you `0.05 TiB / 4.0 Tib`. While I enjoy having the flexibility, I think it's a little easier to read the results when using `auto` as a unit.
-* The `filesystem-usage-clickable.py` uses a hack to overcome the limitation where `click-*` doesn't allow `env-*` variables. Each inherited instances has a variable `env-toggle_script` which is the name of the script that will be created to toggle the output format. It's passed via the `--toggle-script` flag. A small shell script is generated and `chmod 755`'d. The `click-left` action is simply to call this script. It's kludgy, but it works.
+* The `*-clickable.py` scripts use a hack to allow both clickability AND running on an interval. Use cases include when I want to click on my CPU usage module to see different output formats. This will be explained in the `Clickability` section.
 
 ## Formatting disk and memory usage output
 There are currently six tokens that can be used to format the output when using `filesystem-usage-formatted.py` and `memory-usage-formatted.py`:
@@ -51,6 +51,35 @@ Glyphs and formatting noise have been removed for readbility's sake. In the last
 % ./scripts/filesystem-usage-formatted.py --mountpoint "/work" --format '{^used (or ^pct_used) out of ^total}' --unit Gi
 /work 1236.41 GiB (or 36%) out of 3666.49 GiB
 ```
+
+## Clickability
+My goal was to have a module that would both run on an interval and also be clickable. By default, it seems these two are mutually exclusive. The `custom/script` type allows me to use the `interval` parameter but doesn't allow me use the features of `custom/ipc`, such as sending messages via `polybar-msg`. You can see my frustration. Fortunately I was able to find a workaround in the form of a bit of a hack. Let's look at a single example.
+```
+[module/memory-usage-clickable]
+type = custom/ipc
+label = %output%
+initial = 1
+hook-0 = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto
+click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto --toggle && polybar-msg action memory-usage-clickable hook 0
+daemonize = true
+daemonize-arg-interval = 2
+```
+When the module is executed, `hook-0` is called, which simply displays the default output. The `click-left` action executes the script with `--toggle`, which updates the output format via state file. It also displays the output in the new format.
+
+To accomplish executing these scripts on an interval, I've added two flags, `--daemonize` and `--interval`. The `daemonize-*` parameters are parsed by `launch.py` (which is invoked by the required `launch.sh`). There is logic to manage these scripts so that there aren't multiple copies of them running, etc. Anyhow, when `launch.py` is executed, there is a function that daemonizes the modules that are currently support this. In a future release, `launch.py` will do this without them being hardcoded.
+
+Upon invocation, `launch.py` does the following:
+1. Configures the logger
+2. Verifies both `polybar` and `polybar-msg` are in the PATH
+3. Determines the path of the configuration file
+4. Parses the configuration file
+5. Determines if IPC is enabled and kills polybar using either `polybar-msg` or `kill`
+6. Re-launches polybar
+7. Daemonizes modules that are configured to do so
+
+If any step in the process fails, the script exits with an explanation as to what caused the failure.
+
+Note, at every interval, a daemonized script will check to see if polybar is running. If it is not running, the script exits on its own. Scripts with a longer interval, e.g., `polybar-speedtest` will take a fair amount of time to exit on their own because it may be in a sleep state.
 
 ## Permissions
 You will need to add yourself to `/etc/sudoers` in order to execute some commands. Do something like this. Obviously pick only the ones you need.
