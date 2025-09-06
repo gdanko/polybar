@@ -95,13 +95,13 @@ def main():
             if not util.polybar_is_running():
                 sys.exit(0)
             loading = f'{util.color_title(glyphs.fa_arrow_rotate_right)} Speedtest running...'
-            _, _, _ = util.run_piped_command(f'polybar-msg action "#speedtest.send.{loading}"')
+            _, _, _ = util.run_piped_command(f'polybar-msg action "#polybar-speedtest.send.{loading}"')
             test_data, errors, icon = execute_tests(args)
             if len(test_data) > 0:
                 output = f'{util.color_title(icon)} {' '.join(test_data)}'
             else:
                 output = f'{util.color_title(icon)} {util.color_error('All tests failed')}'
-            _, _, _ = util.run_piped_command(f'polybar-msg action "#speedtest.send.{output}"')
+            _, _, _ = util.run_piped_command(f'polybar-msg action "#polybar-speedtest.send.{output}"')
             time.sleep(args.interval)
     else:
         test_data, errors, icon = execute_tests(args)
