@@ -80,8 +80,9 @@ md_cpu_64_bit = util.surrogatepass('\udb83\udee0')
 md_harddisk = util.surrogatepass('\udb80\udeca')
 
 # Memory
-fa_memory = util.surrogatepass('\uefc5')
-md_memory = util.surrogatepass('\udb80\udf5b')
+cod_arrow_swap = util.surrogatepass('\uebcb')
+fa_memory      = util.surrogatepass('\uefc5')
+md_memory      = util.surrogatepass('\udb80\udf5b')
 
 # Speedtest
 md_speedometer_slow   = util.surrogatepass('\udb83\udf86')
