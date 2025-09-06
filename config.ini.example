@@ -170,13 +170,6 @@ type = custom/script
 interval = 2
 exec = ~/.config/polybar/scripts/cpu-usage.py
 
-; [module/cpu-usage-clickable]
-; type = custom/ipc
-; label = %output%
-; initial = 1
-; hook-0 = ~/.config/polybar/scripts/cpu-usage-clickable.py
-; click-left = ~/.config/polybar/scripts/cpu-usage-clickable.py --toggle && polybar-msg action cpu-usage-clickable hook 0
-
 [module/cpu-usage-clickable]
 type = custom/ipc
 label = %output%
