@@ -224,9 +224,11 @@ inherit = stocks-base
 env-symbol = "NOW"
 
 [module/speedtest]
-type = custom/script
-interval = 300
-exec = ~/.config/polybar/scripts/polybar-speedtest.py --download --upload
+type = custom/ipc
+label = %output%
+initial = 2
+hook-0 = echo "%{F#F0C674}%{F-} Speedtest running..."
+hook-1 = ~/.config/polybar/scripts/polybar-speedtest.py --upload --download --interval 900 --daemonize & polybar-msg action speedtest hook 0
 
 [system-updates-base]
 type = custom/script
