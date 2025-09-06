@@ -154,6 +154,7 @@ inherit = filesystem-usage-clickable-base
 hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto
 click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto --toggle && polybar-msg action filesystem-usage-clickable-root hook 0
 daemonize = true
+daemonize-script = filesystem-usage-clickable.py
 daemonize-arg-label = root
 daemonize-arg-interval = 2
 
@@ -165,6 +166,7 @@ inherit = filesystem-usage-clickable-base
 hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto
 click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto --toggle && polybar-msg action filesystem-usage-clickable-work hook 0
 daemonize = true
+daemonize-script = filesystem-usage-clickable.py
 daemonize-arg-label = work
 daemonize-arg-interval = 2
 

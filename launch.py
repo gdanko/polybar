@@ -123,8 +123,18 @@ def kill_if_running(ps_command_string: str=None):
     else:
         return
 
-def daemonize(module_name: str=None, script_name: str=None, polybar_config=None):
-    if not script_name:
+def daemonize(module_name: str=None, str=None, polybar_config=None, testing: bool=False):
+    try:
+        module_config = dict(polybar_config[f'module/{module_name}'])
+        if 'daemonize' in module_config:
+            module_config['daemonize'] = True if module_config['daemonize'] == 'true' else False
+    except Exception as e:
+        logging.error(f'Failed to parse the configuration for module/{module_name}: {e}')
+        sys.exit(1)
+
+    if 'daemonize-script' in module_config:
+        script_name = os.path.join(util.get_script_directory(), f'{module_config["daemonize-script"]}')
+    else:
         script_name = os.path.join(util.get_script_directory(), f'{module_name}.py')
 
     if not util.file_exists(script_name):
@@ -133,14 +143,6 @@ def daemonize(module_name: str=None, script_name: str=None, polybar_config=None)
 
     if not util.file_is_executable(script_name):
         logging.error(f'The script {script_name} isn\'t executable')
-        sys.exit(1)
-
-    try:
-        module_config = dict(polybar_config[f'module/{module_name}'])
-        if 'daemonize' in module_config:
-            module_config['daemonize'] = True if module_config['daemonize'] == 'true' else False
-    except Exception as e:
-        logging.error(f'Failed to parse the configuration for module/{module_name}: {e}')
         sys.exit(1)
 
     command_bits = [ script_name ]
@@ -158,6 +160,11 @@ def daemonize(module_name: str=None, script_name: str=None, polybar_config=None)
     command = ' '.join(command_bits)
     ps_command_string = f'python3 {command}'
 
+    if testing:
+        print(command)
+        print(ps_command_string)
+        sys.exit(0)
+
     kill_if_running(ps_command_string=ps_command_string)
 
     try:
@@ -167,7 +174,7 @@ def daemonize(module_name: str=None, script_name: str=None, polybar_config=None)
         logging.error(f'Failed to execute {command}: {e}')
         sys.exit(1)
 
-def daemonize_processes(polybar_config=None):
+def daemonize_processes(polybar_config=None, testing: bool=False):
     enabled_modules = find_enabled_modules()
 
     # Standard modules
@@ -178,19 +185,22 @@ def daemonize_processes(polybar_config=None):
 
     # Non-standard modules
     module_name = 'filesystem-usage-clickable'
-    script_name = os.path.join(util.get_script_directory(), f'{module_name}.py')
     filesystems = [module for module in enabled_modules if module.startswith('filesystem-usage-clickable-')]
     for filesystem in filesystems:
-        daemonize(module_name=filesystem, script_name=script_name, polybar_config=polybar_config)
+        daemonize(module_name=filesystem, polybar_config=polybar_config, testing=testing)
 
 def main():
     debug = True
+    testing = False
     configure_logging(debug=debug)
     initialize()
     bar_name = 'main'
 
     polybar_config_file = os.path.join(util.get_config_directory(), 'config.ini')
     polybar_config = parse_config(filename=polybar_config_file)
+    if testing:
+        daemonize_processes(polybar_config=polybar_config, testing=testing)
+        sys.exit(0)
 
     # dynamically get all bar names and handle them accordingly!
     if 'bar/main' in polybar_config:
