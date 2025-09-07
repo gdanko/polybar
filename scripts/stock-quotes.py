@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 from polybar import glyphs, util
 from urllib.parse import urlunparse
 from urllib.request import urlopen, Request
