@@ -13,7 +13,6 @@ import time
 class CpuInfo(NamedTuple):
     success   : Optional[bool]  = False
     error     : Optional[str]   = None
-    icon      : Optional[str]   = None
     model     : Optional[str]   = None
     freq      : Optional[str]   = None
     cores     : Optional[int]   = 0
@@ -56,21 +55,17 @@ def get_cpu_type():
         return 'Unknown CPU model'
 
 def get_cpu_freq():
-    binary = 'lscpu'
-    if util.is_binary_installed(binary):
-        command = f'{binary} | grep "CPU max MHz"'
-        rc, stdout, _ = util.run_piped_command(command)
-        if rc == 0:
-            bits = re.split(r'\s*:\s*', stdout)
-            if len(bits) == 2:
-                # error checking
-                freq = int(float(bits[1]))
-                if freq < 1000:
-                    return f'{freq} MHz'
-                else:
-                    return f'{util.pad_float(float(freq / 1000))} GHz'
+    command = f'lscpu | grep "CPU max MHz"'
+    rc, stdout, _ = util.run_piped_command(command)
+    if rc == 0:
+        bits = re.split(r'\s*:\s*', stdout)
+        if len(bits) == 2:
+            # error checking
+            freq = int(float(bits[1]))
+            if freq < 1000:
+                return f'{freq} MHz'
             else:
-                return 'Unknown CPU freq'
+                return f'{util.pad_float(float(freq / 1000))} GHz'
         else:
             return 'Unknown CPU freq'
     else:
@@ -88,8 +83,7 @@ def get_load_averages():
     """
     Execute uptime and return the load averages
     """
-    command = 'uptime'
-    rc, stdout, stderr = util.run_piped_command(command)
+    rc, stdout, stderr = util.run_piped_command('uptime')
     if rc == 0:
         if stdout != '':
             match = re.search(r"load average:\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)", stdout)
@@ -118,7 +112,6 @@ def get_cpu_info() -> CpuInfo:
             values = re.split(r'\s+', stdout)
             cpu_info = CpuInfo(
                 success   = True,
-                icon      = get_icon(),
                 model     = get_cpu_type(),
                 freq      = get_cpu_freq(),
                 cores     = get_cpu_cores(),
@@ -138,36 +131,26 @@ def get_cpu_info() -> CpuInfo:
             )
         else:
             cpu_info = CpuInfo(
-                success   = True,
+                success   = False,
                 error     = f'no output from mpstat',
-                icon      = icon,
             )
     else:
         if stderr != '':
             cpu_info = CpuInfo(
-                success   = True,
+                success   = False,
                 error     = stderr,
-                icon      = icon,
             )
         else:
             cpu_info = CpuInfo(
-                success   = True,
-                error     = 'non-zero exit code',
-                icon      = icon,
+                success   = False,
+                error     = f'failed to execute {command}',
             )
 
     return cpu_info
 
 def main():
-    missing = util.missing_binaries(['grep', 'mpstat', 'uptime'])
-    if len(missing) > 0:
-        error = f'please install: {", ".join(missing)}'
-        output = f'{util.color_title(get_icon())} {util.color_error(error)}'
-        print(output)
-        sys.exit(1)
-
     mode_count = 3
-    parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
+    parser = argparse.ArgumentParser(description='Get CPU usage from mpstat(1)')
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
     parser.add_argument('-b', '--background', action='store_true', help='Run this script in the background', required=False)
@@ -190,15 +173,15 @@ def main():
 
         if cpu_info.success:
             if mode == 0:
-                output = f'{util.color_title(cpu_info.icon)} user {cpu_info.user}%, sys {cpu_info.system}%, idle {cpu_info.idle}%'
+                output = f'{util.color_title(get_icon())} user {cpu_info.user}%, sys {cpu_info.system}%, idle {cpu_info.idle}%'
             elif mode == 1:
-                output = f'{util.color_title(cpu_info.icon)} {cpu_info.cores} x {cpu_info.model} @ {cpu_info.freq}'
+                output = f'{util.color_title(get_icon())} {cpu_info.cores} x {cpu_info.model} @ {cpu_info.freq}'
             elif mode == 2:
-                output = f'{util.color_title(cpu_info.icon)} load {cpu_info.load1},  {cpu_info.load5},  {cpu_info.load15}'
+                output = f'{util.color_title(get_icon())} load {cpu_info.load1},  {cpu_info.load5},  {cpu_info.load15}'
             print(output)
             sys.exit(0)
         else:
-            output = f'{util.color_title(cpu_info.icon)} {util.color_error(cpu_info.error)}'
+            output = f'{util.color_title(get_icon())} {util.color_error(cpu_info.error)}'
             print(output)
             sys.exit(1)
 

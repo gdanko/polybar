@@ -67,17 +67,21 @@ def run_piped_command(command: str=None, background: bool=False) -> Union[
     prev_stdout = None
 
     for i, part in enumerate(parts):
-        proc = subprocess.Popen(
-            part,
-            stdin=prev_stdout,
-            stdout=subprocess.PIPE if not background else subprocess.DEVNULL,
-            stderr=subprocess.PIPE if not background and i == len(parts) - 1 else subprocess.DEVNULL,
-            preexec_fn=os.setpgrp if background else None
-        )
-        if prev_stdout:
-            prev_stdout.close()
-        prev_stdout = proc.stdout
-        processes.append(proc)
+        try:
+            proc = subprocess.Popen(
+                part,
+                stdin=prev_stdout,
+                stdout=subprocess.PIPE if not background else subprocess.DEVNULL,
+                stderr=subprocess.PIPE if not background and i == len(parts) - 1 else subprocess.DEVNULL,
+                preexec_fn=os.setpgrp if background else None
+            )
+
+            if prev_stdout:
+                prev_stdout.close()
+            prev_stdout = proc.stdout
+            processes.append(proc)
+        except FileNotFoundError as e:
+            return 1, None, e
 
     if background:
         # Don't wait; return process list so caller can manage if needed

@@ -47,7 +47,6 @@ def get_disk_usage(mountpoint: str) -> list:
             pct_used   = round((used / (used + free)) * 100)
             pct_free   = pct_total - pct_used
 
-
             filesystem_info = FilesystemInfo(
                 success    = True,
                 mountpoint = mountpoint,
@@ -61,22 +60,22 @@ def get_disk_usage(mountpoint: str) -> list:
             )
         else:
             filesystem_info = FilesystemInfo(
-                success    = True,
+                success    = False,
                 mountpoint = mountpoint,
-                error      = f'{mountpoint} no output from {command}',
+                error      = f'no output from {command}',
             )
     else:
         if stderr != '':
             filesystem_info = FilesystemInfo(
-                success    = True,
+                success    = False,
                 mountpoint = mountpoint,
-                error      = f'{mountpoint} {stderr}',
+                error      = stderr,
             )
         else:
             filesystem_info = FilesystemInfo(
-                success    = True,
+                success    = False,
                 mountpoint = mountpoint,
-                error      = f'{mountpoint} failed to execute {command}'
+                error      = f'failed to execute {command}'
             )
 
     return filesystem_info
@@ -100,7 +99,7 @@ def main():
         print(f'{util.color_title(glyphs.md_harddisk)} {util.color_title(disk_info.mountpoint)} {util.byte_converter(number=disk_info.used, unit=args.unit)} / {util.byte_converter(number=disk_info.total, unit=args.unit)}')
         sys.exit(0)
     else:
-        print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(disk_info.error)}')
+        print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(disk_info.mountpoint)} {util.color_error(disk_info.error)}')
         sys.exit(1)
 
 if __name__ == '__main__':

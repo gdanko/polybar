@@ -9,7 +9,6 @@ import sys
 class CpuInfo(NamedTuple):
     success   : Optional[bool]  = False
     error     : Optional[str]   = None
-    icon      : Optional[str]   = None
     idle      : Optional[float] = 0.0
     nice      : Optional[float] = 0.0
     system    : Optional[float] = 0.0
@@ -34,15 +33,13 @@ def get_cpu_usage():
     Execute mpstat'
     """
 
-    binary = 'mpstat'
-    command = f'{binary} | tail -n 1'
-    rc, stdout, stderr = util.run_piped_command(f'{binary} | tail -n 1')
+    command = f'mpstat | tail -n 1'
+    rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
         if stdout != '':
             values = re.split(r'\s+', stdout)
             cpu_info = CpuInfo(
                 success   = True,
-                icon      = get_icon(),
                 idle      = util.pad_float(values[12]),
                 nice      = util.pad_float(values[4]),
                 system    = util.pad_float(values[5]),
@@ -56,41 +53,31 @@ def get_cpu_usage():
             )
         else:
             cpu_info = CpuInfo(
-                success   = True,
+                success   = False,
                 error     = f'no output from mpstat',
-                icon      = icon,
             )
     else:
         if stderr != '':
             cpu_info = CpuInfo(
-                success   = True,
+                success   = False,
                 error     = stderr,
-                icon      = icon,
             )
         else:
             cpu_info = CpuInfo(
-                success   = True,
-                error     = 'non-zero exit code',
-                icon      = icon,
+                success   = False,
+                error     = f'failed to execute {command}'
             )
 
     return cpu_info
 
 def main():
-    missing = util.missing_binaries(['mpstat', 'tail'])
-    if len(missing) > 0:
-        error = f'please install: {", ".join(missing)}'
-        output = f'{util.color_title(get_icon())} {util.color_error(error)}'
-        print(output)
-        sys.exit(1)
-
     cpu_info = get_cpu_usage()
 
     if cpu_info.success:
-        print(f'{util.color_title(cpu_info.icon)} user {cpu_info.user}%, sys {cpu_info.system}%, idle {cpu_info.idle}%')
+        print(f'{util.color_title(get_icon())} user {cpu_info.user}%, sys {cpu_info.system}%, idle {cpu_info.idle}%')
         sys.exit(0)
     else:
-        print(f'{util.color_title(cpu_info.icon)} {util.color_error(cpu_info.error)}')
+        print(f'{util.color_title(get_icon())} {util.color_error(cpu_info.error)}')
         sys.exit(1)
 
 if __name__ == "__main__":

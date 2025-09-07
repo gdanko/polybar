@@ -98,20 +98,20 @@ def get_disk_usage(mountpoint: str) -> list:
             )
         else:
             filesystem_info = FilesystemInfo(
-                success    = True,
+                success    = False,
                 mountpoint = mountpoint,
                 error      = f'{mountpoint} no output from {command}',
             )
     else:
         if stderr != '':
             filesystem_info = FilesystemInfo(
-                success    = True,
+                success    = False,
                 mountpoint = mountpoint,
                 error      = f'{mountpoint} {stderr}',
             )
         else:
             filesystem_info = FilesystemInfo(
-                success    = True,
+                success    = False,
                 mountpoint = mountpoint,
                 error      = f'{mountpoint} failed to execute {command}'
             )

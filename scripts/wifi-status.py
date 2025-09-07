@@ -37,7 +37,6 @@ def get_wifi_status(interface):
 
     statuses = []
     command = f'iwconfig {interface}'
-
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
         if stdout != '':
@@ -50,7 +49,7 @@ def get_wifi_status(interface):
                 )
             else:
                 wifi_status = WifiStatus(
-                    success   = True,
+                    success   = False,
                     interface = interface,
                     error     = f'regex failure on output',
                 )
@@ -63,13 +62,13 @@ def get_wifi_status(interface):
     else:
         if stderr != '':
             wifi_status = WifiStatus(
-                success   = True,
+                success   = False,
                 interface = interface,
                 error     = stderr,
             )
         else:
             wifi_status = WifiStatus(
-                success   = True,
+                success   = False,
                 interface = interface,
                 error     = f'failed to execute {command}',
             )
@@ -77,13 +76,6 @@ def get_wifi_status(interface):
     return wifi_status
 
 def main():
-    missing = util.missing_binaries(['iwconfig'])
-    if len(missing) > 0:
-        error = f'please install: {", ".join(missing)}'
-        output = f'{util.color_title(glyphs.md_wifi_strength_alert_outline)} {util.color_error(error)}'
-        print(output)
-        sys.exit(1)
-
     parser = argparse.ArgumentParser(description="Get WiFi status from iwconfig(8)")
     parser.add_argument("-i", "--interface", help="The interface to check", required=True)
     args = parser.parse_args()
