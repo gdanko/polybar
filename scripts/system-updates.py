@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from dataclasses import dataclass, field
-from pathlib import Path
 from polybar import glyphs, util
 from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 import argparse
