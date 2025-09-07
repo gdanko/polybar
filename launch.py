@@ -9,6 +9,8 @@ import subprocess
 import sys
 import time
 
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
 try:
     import click
 except ImportError:
@@ -223,14 +225,14 @@ def stop(ipc_enabled: bool=False, pid: str=None):
     print('Stopping polybar')
     kill_polybar_if_running(ipc_enabled=ipc_enabled, pid=pid)
 
-@click.command()
+@click.command(help='stop / start / restart polybar', context_settings=CONTEXT_SETTINGS)
 @click.argument('action', required=False, type=click.Choice(['start', 'stop', 'restart']))
 @click.option('-d', '--debug', is_flag=True, help='Enable debug mode')
 @click.option('-t', '--test', is_flag=True, help='Enable test mode')
 @click.option('-p', '--pid', help='Specify a pid')
 def cli(action, debug, test, pid):
     """
-    Start and stop polybar
+    stop / start / restart polybar
     """
     configure_logging(debug=debug)
     initialize(action)
