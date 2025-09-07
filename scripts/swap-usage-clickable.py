@@ -62,7 +62,7 @@ def get_swap_usage():
         if stderr != '':
             swap_info = SwapInfo(
                 success = False,
-                error   = stderr.strip(),
+                error   = stderr,
             )
         else:
             swap_info = SwapInfo(
@@ -73,6 +73,13 @@ def get_swap_usage():
     return swap_info
 
 def main():
+    missing = util.missing_binaries(['free', 'sed'])
+    if len(missing) > 0:
+        error = f'please install: {", ".join(missing)}'
+        output = f'{util.color_title(glyphs.cod_arrow_swap)} {util.color_error(error)}'
+        print(output)
+        sys.exit(1)
+
     mode_count = 3
     parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
     parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
