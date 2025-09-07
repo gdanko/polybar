@@ -3,6 +3,7 @@ from pprint import pprint as pp
 from typing import List, Tuple, Optional, Union
 import json
 import os
+import re
 import shlex
 import shutil
 import socket
@@ -132,7 +133,7 @@ def network_speed(number: int=0, bytes: bool=False, no_suffix: bool=False) -> st
             return f'{round(number, 2)} {unit}{suffix}'
         number = number / 1024
 
-def byte_converter(number: int=0, unit: Optional[str] = None) -> str:
+def byte_converter(number: int=0, unit: Optional[str] = None, use_int: bool=False) -> str:
     """
     Convert bytes to the given unit.
     """
@@ -152,8 +153,14 @@ def byte_converter(number: int=0, unit: Optional[str] = None) -> str:
         if len(unit) == 2 and unit.endswith('i'):
             divisor = 1024
 
-        prefix_map = {'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5, 'E': 6, 'Z': 7}
-        return f'{pad_float(number / (divisor ** prefix_map[prefix]))} {unit}{suffix}'
+        prefix_map = {'K': 1, 'Ki': 1, 'M': 2, 'Mi': 2,  'G': 3, 'Gi': 3, 'T': 4, 'Ti': 4, 'P': 5, 'Pi': 5, 'E': 6, 'Ei': 6, 'Z': 7, 'Zi': 7}
+        if unit in prefix_map.keys():
+            if use_int:
+                return f'{int(number / (divisor ** prefix_map[prefix]))}{unit}{suffix}'
+            else:
+                return f'{pad_float(number / (divisor ** prefix_map[prefix]))} {unit}{suffix}'
+        else:
+            return f'{number} {suffix}'
 
 def file_exists(filename: str='') -> bool:
     return True if (os.path.exists(filename) and os.path.isfile(filename)) else False
@@ -203,6 +210,13 @@ def parse_config_file(filename: str='', required_keys: list=[]):
 def is_binary_installed(binary_name: str) -> bool:
     return shutil.which(binary_name) is not None
 
+def missing_binaries(binaries: list=[]):
+    missing = []
+    for binary in binaries:
+        if not is_binary_installed(binary):
+            missing.append(binary)
+    return missing
+
 def parse_json_string(input: str=''):
     try:
         json_data = json.loads(input)
@@ -230,3 +244,13 @@ def network_is_reachable():
             return True
     except OSError:
         return False
+
+def to_snake_case(s: str) -> str:
+    # Replace anything that's not a letter or number with underscore
+    s = re.sub(r'[^0-9a-zA-Z]+', '_', s)
+    # Add underscore between camelCase or PascalCase boundaries
+    s = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s)
+    # Collapse multiple underscores into one
+    s = re.sub(r'_+', '_', s)
+    # Strip leading/trailing underscores, lowercase
+    return s.strip('_').lower()
