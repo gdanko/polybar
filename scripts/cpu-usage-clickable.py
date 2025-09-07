@@ -31,6 +31,14 @@ class CpuInfo(NamedTuple):
     load5     : Optional[float] = 0.0
     load15    : Optional[float] = 0.0
 
+def get_icon():
+    if platform.machine() == 'x86':
+        return glyphs.md_cpu_32_bit
+    elif platform.machine() == 'x86_64':
+        return glyphs.md_cpu_64_bit
+    else:
+        return glyphs.oct_cpu
+
 def get_statefile_name() -> str:
     statefile = os.path.basename(__file__)
     statefile_no_ext = os.path.splitext(statefile)[0]
@@ -87,8 +95,8 @@ def get_load_averages():
             match = re.search(r"load average:\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)", stdout)
             if match:
                 return [float(avg) for avg in list(match.groups())]
-    exit()
 
+    return [-1.0, -1.0, -1.0]
 
 def get_cpu_info() -> CpuInfo:
     """
@@ -102,64 +110,62 @@ def get_cpu_info() -> CpuInfo:
     else:
         icon = glyphs.oct_cpu
 
-    binary = 'mpstat'
-
     # make sure mpstat is installed
     load_averages = get_load_averages()
-    if util.is_binary_installed(binary):
-        rc, stdout, stderr = util.run_piped_command(f'{binary} | tail -n 1')
-        if rc == 0:
-            if stdout != '':
-                values = re.split(r'\s+', stdout)
-                cpu_info = CpuInfo(
-                    success   = True,
-                    icon      = icon,
-                    model     = get_cpu_type(),
-                    freq      = get_cpu_freq(),
-                    cores     = get_cpu_cores(),
-                    idle      = util.pad_float(values[12]),
-                    nice      = util.pad_float(values[4]),
-                    system    = util.pad_float(values[5]),
-                    user      = util.pad_float(values[3]),
-                    iowait    = util.pad_float(values[6]),
-                    irq       = util.pad_float(values[7]),
-                    softirq   = util.pad_float(values[7]),
-                    steal     = util.pad_float(values[9]),
-                    guest     = util.pad_float(values[10]),
-                    guestnice = util.pad_float(values[11]),
-                    load1     = util.pad_float(load_averages[0]),
-                    load5     = util.pad_float(load_averages[1]),
-                    load15    = util.pad_float(load_averages[2]),
-                )
-            else:
-                cpu_info = CpuInfo(
-                    success   = True,
-                    error     = f'no output from mpstat',
-                    icon      = icon,
-                )
+    rc, stdout, stderr = util.run_piped_command(f'mpstat | tail -n 1')
+    if rc == 0:
+        if stdout != '':
+            values = re.split(r'\s+', stdout)
+            cpu_info = CpuInfo(
+                success   = True,
+                icon      = get_icon(),
+                model     = get_cpu_type(),
+                freq      = get_cpu_freq(),
+                cores     = get_cpu_cores(),
+                idle      = util.pad_float(values[12]),
+                nice      = util.pad_float(values[4]),
+                system    = util.pad_float(values[5]),
+                user      = util.pad_float(values[3]),
+                iowait    = util.pad_float(values[6]),
+                irq       = util.pad_float(values[7]),
+                softirq   = util.pad_float(values[7]),
+                steal     = util.pad_float(values[9]),
+                guest     = util.pad_float(values[10]),
+                guestnice = util.pad_float(values[11]),
+                load1     = util.pad_float(load_averages[0]),
+                load5     = util.pad_float(load_averages[1]),
+                load15    = util.pad_float(load_averages[2]),
+            )
         else:
-            if stderr != '':
-                cpu_info = CpuInfo(
-                    success   = True,
-                    error     = stderr.strip(),
-                    icon      = icon,
-                )
-            else:
-                cpu_info = CpuInfo(
-                    success   = True,
-                    error     = 'non-zero exit code',
-                    icon      = icon,
-                )
+            cpu_info = CpuInfo(
+                success   = True,
+                error     = f'no output from mpstat',
+                icon      = icon,
+            )
     else:
-        cpu_info = CpuInfo(
-            success   = True,
-            error     = f'please install the sysstat package',
-            icon      = icon,
-        )
+        if stderr != '':
+            cpu_info = CpuInfo(
+                success   = True,
+                error     = stderr,
+                icon      = icon,
+            )
+        else:
+            cpu_info = CpuInfo(
+                success   = True,
+                error     = 'non-zero exit code',
+                icon      = icon,
+            )
 
     return cpu_info
 
 def main():
+    missing = util.missing_binaries(['grep', 'mpstat', 'uptime'])
+    if len(missing) > 0:
+        error = f'please install: {", ".join(missing)}'
+        output = f'{util.color_title(get_icon())} {util.color_error(error)}'
+        print(output)
+        sys.exit(1)
+
     mode_count = 3
     parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
