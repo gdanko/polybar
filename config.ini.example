@@ -105,8 +105,8 @@ label = %output%
 initial = 1
 hook-0 = ~/.config/polybar/scripts/cpu-usage-clickable.py
 click-left = ~/.config/polybar/scripts/cpu-usage-clickable.py --toggle && polybar-msg action cpu-usage-clickable hook 0
-daemonize = true
-daemonize-arg-interval = 2
+background = true
+background-arg-interval = 2
 
 ;==========================================================
 ;  Filesystem
@@ -153,10 +153,10 @@ inherit = filesystem-usage-clickable-base
 ; env-unit = "auto"
 hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto
 click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto --toggle && polybar-msg action filesystem-usage-clickable-root hook 0
-daemonize = true
-daemonize-script = filesystem-usage-clickable.py
-daemonize-arg-label = root
-daemonize-arg-interval = 2
+background = true
+background-script = filesystem-usage-clickable.py
+background-arg-label = root
+background-arg-interval = 2
 
 [module/filesystem-usage-clickable-work]
 inherit = filesystem-usage-clickable-base
@@ -165,10 +165,10 @@ inherit = filesystem-usage-clickable-base
 ; env-unit = "auto"
 hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto
 click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto --toggle && polybar-msg action filesystem-usage-clickable-work hook 0
-daemonize = true
-daemonize-script = filesystem-usage-clickable.py
-daemonize-arg-label = work
-daemonize-arg-interval = 2
+background = true
+background-script = filesystem-usage-clickable.py
+background-arg-label = work
+background-arg-interval = 2
 
 ;==========================================================
 ;  Memory
@@ -192,8 +192,8 @@ label = %output%
 initial = 1
 hook-0 = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto
 click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto --toggle && polybar-msg action memory-usage-clickable hook 0
-daemonize = true
-daemonize-arg-interval = 2
+background = true
+background-arg-interval = 2
 
 ;==========================================================
 ;  Network
@@ -219,15 +219,14 @@ label-connected = %{F#F0C674}%ifname%%{F-} %downspeed% RX / %upspeed% TX
 ;==========================================================
 
 [module/polybar-speedtest]
-; This is launched and daemonized by launch.py so we don't do anything here
 type = custom/ipc
 label = %output%
 initial = 1
 hook-0 = echo "%{F#F0C674}%{F-} Speedtest running..."
-daemonize = true
-daemonize-arg-download =
-daemonize-arg-upload =
-daemonize-arg-interval = 300
+background = true
+background-arg-download =
+background-arg-upload =
+background-arg-interval = 300
 
 ;==========================================================
 ;  Stocks
@@ -268,8 +267,8 @@ label = %output%
 initial = 1
 hook-0 = ~/.config/polybar/scripts/swap-usage-clickable.py --unit auto
 click-left = ~/.config/polybar/scripts/swap-usage-clickable.py --unit auto --toggle && polybar-msg action swap-usage-clickable hook 0
-daemonize = true
-daemonize-arg-interval = 2
+background = true
+background-arg-interval = 2
 
 ;==========================================================
 ;  System Updates

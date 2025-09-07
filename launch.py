@@ -7,6 +7,13 @@ import os
 import re
 import subprocess
 import sys
+import time
+
+try:
+    import click
+except ImportError:
+    print(f'Please install click via pip')
+    sys.exit(1)
 
 class RightPadFormatter(logging.Formatter):
     def __init__(self, levelnames):
@@ -28,11 +35,15 @@ def configure_logging(debug: bool=False):
     logger.setLevel(logging.DEBUG) if debug else logger.setLevel(logging.INFO)
     logger.addHandler(handler)
 
-def initialize():
+def initialize(action):
     for binary in ['polybar', 'polybar-msg']:
         if not util.is_binary_installed(binary):
             logging.error(f'{binary} is not installed')
             sys.exit(1)
+    
+    if not action:
+        logging.error('You must specify either start or stop')
+        sys.exit(1)
 
 def parse_config(filename: str=None):
     try:
@@ -44,16 +55,20 @@ def parse_config(filename: str=None):
 
     return parser
 
-def kill_polybar_if_running(ipc_enabled):
-    command = 'polybar-msg cmd quit' if ipc_enabled else 'killall -q polybar'
-    rc, _, stderr = util.run_piped_command(command)
-    if rc != 0:
-        if stderr == 'polybar-msg: No active ipc channels':
-            logging.info(f'Polybar isn\'t running')
-            return
+def kill_polybar_if_running(ipc_enabled: bool=False, pid: str=None):
+    if util.polybar_is_running():
+        if pid:
+            command = f'polybar-msg -p {pid} cmd quit' if ipc_enabled else f'kill {pid}'
         else:
-            logging.error(f'Failed to execute {command}: {stderr}')
+            command = f'polybar-msg cmd quit' if ipc_enabled else 'killall -q polybar'
+
+        rc, _, stderr = util.run_piped_command(command)
+        if rc != 0:
+            error = stderr if stderr != '' else 'Unknown error'
+            logging.error(f'Failed to execute {command}: {error}')
             sys.exit(1)
+    else:
+        print('Not running')
 
 def launch_polybar(bar_name: str=None):
     # Here we'll simulate what's done in launch.sh
@@ -81,10 +96,16 @@ def launch_polybar(bar_name: str=None):
                 stderr     = subprocess.STDOUT,
                 preexec_fn = os.setpgrp  # Detach like 'disown'
             )
-            logging.info(f'Successfully launched Polybar with PID {proc.pid}')
+            print(f'Successfully launched Polybar with PID {proc.pid}')
     except Exception as e:
         logging.error(f'Failed to launch Polybar: {e}')
         sys.exit(1)
+
+def background_processes(polybar_config=None, testing: bool=False):
+    all_modules = sorted([section.replace('module/', '') for section in polybar_config.sections() if section.startswith('module/')])
+    common_modules = sorted(list(set(find_enabled_modules()) & set(all_modules)))
+    for module_name in common_modules:
+        background(module_name=module_name, polybar_config=polybar_config, testing=testing)
 
 def find_enabled_modules() -> list:
     enabled_modules = []
@@ -101,6 +122,56 @@ def find_enabled_modules() -> list:
             sys.exit(1)
 
     return sorted(enabled_modules)
+
+def background(module_name: str=None, str=None, polybar_config=None, testing: bool=False):
+    try:
+        module_config = dict(polybar_config[f'module/{module_name}'])
+        if 'background' in module_config:
+            module_config['background'] = True if module_config['background'] == 'true' else False
+    except Exception as e:
+        logging.error(f'Failed to parse the configuration for module/{module_name}: {e}')
+        sys.exit(1)
+
+    if 'background-script' in module_config:
+        script_name = os.path.join(util.get_script_directory(), f'{module_config["background-script"]}')
+    else:
+        script_name = os.path.join(util.get_script_directory(), f'{module_name}.py')
+
+    if 'background' in module_config:
+        if module_config['background']:
+            if not util.file_exists(script_name):
+                logging.error(f'The script {script_name} doesn\'t exist')
+                sys.exit(1)
+
+            if not util.file_is_executable(script_name):
+                logging.error(f'The script {script_name} isn\'t executable')
+                sys.exit(1)
+
+            command_bits = [ script_name ]
+
+            for key, value in module_config.items():
+                if key.startswith('background-arg-'):
+                    command_bits.append(f'--{key.split('-')[2]}')
+                    if value and value != '':
+                        command_bits.append(value)
+            command_bits.append('--background')
+            command = ' '.join(command_bits)
+            ps_command_string = f'python3 {command}'
+
+            if testing:
+                print(f'[TEST] {command}')
+                print(f'[TEST] {ps_command_string}')
+            else:
+                kill_if_running(ps_command_string=ps_command_string)
+
+                try:
+                    logging.debug(f'Attempting to launch {os.path.basename(script_name)} in the background with {command}')
+                    _ = util.run_piped_command(command=command, background=True)
+                except Exception as e:
+                    logging.error(f'Failed to execute {command}: {e}')
+                    sys.exit(1)
+        else:
+            logging.warning(f'The module {module_name} cannot be launched in the background due to a configuration setting')
 
 def kill_if_running(ps_command_string: str=None):
     command = f'pgrep -f "{ps_command_string}"'
@@ -123,83 +194,66 @@ def kill_if_running(ps_command_string: str=None):
     else:
         return
 
-def daemonize(module_name: str=None, str=None, polybar_config=None, testing: bool=False):
-    try:
-        module_config = dict(polybar_config[f'module/{module_name}'])
-        if 'daemonize' in module_config:
-            module_config['daemonize'] = True if module_config['daemonize'] == 'true' else False
-    except Exception as e:
-        logging.error(f'Failed to parse the configuration for module/{module_name}: {e}')
-        sys.exit(1)
+def start(polybar_config=None, bar_name: str=None, ipc_enabled: bool=False, debug: bool=False, test: bool=False, pid: str=None):
+    """
+    A simple wrapper for starting
+    """
+    running, pids = util.process_is_running(name='polybar', full=False)
+    if running and len(pids) > 0:
+        if len(pids) == 1:
+            message = f'polybar is already running with the pid {pids[0]}'
+        elif len(pids) > 1:
+            message = f'{len(pids)} instances of polybar are running with the following pids: {", ".join(pids)}'
+        print(message)
+        sys.exit(0)
 
-    if 'daemonize-script' in module_config:
-        script_name = os.path.join(util.get_script_directory(), f'{module_config["daemonize-script"]}')
-    else:
-        script_name = os.path.join(util.get_script_directory(), f'{module_name}.py')
+    if test:
+        background_processes(polybar_config=polybar_config, testing=test)
+        sys.exit(0)
+    
+    kill_polybar_if_running(ipc_enabled=ipc_enabled)
+    print('Starting polybar')
+    launch_polybar(bar_name=bar_name)
+    background_processes(polybar_config=polybar_config, testing=test)
 
-    if 'daemonize' in module_config:
-        if module_config['daemonize']:
-            if not util.file_exists(script_name):
-                logging.error(f'The script {script_name} doesn\'t exist')
-                sys.exit(1)
+def stop(ipc_enabled: bool=False, pid: str=None):
+    """
+    A simple wrapper for stopping
+    """
+    print('Stopping polybar')
+    kill_polybar_if_running(ipc_enabled=ipc_enabled, pid=pid)
 
-            if not util.file_is_executable(script_name):
-                logging.error(f'The script {script_name} isn\'t executable')
-                sys.exit(1)
-
-            command_bits = [ script_name ]
-
-            for key, value in module_config.items():
-                if key.startswith('daemonize-arg-'):
-                    command_bits.append(f'--{key.split('-')[2]}')
-                    if value and value != '':
-                        command_bits.append(value)
-            command_bits.append('--daemonize')
-            command = ' '.join(command_bits)
-            ps_command_string = f'python3 {command}'
-
-            if testing:
-                print(command)
-                print(ps_command_string)
-            else:
-                kill_if_running(ps_command_string=ps_command_string)
-
-                try:
-                    logging.debug(f'Attempting to daemonize {os.path.basename(script_name)} with {command}')
-                    _ = util.run_piped_command(command=command, background=True)
-                except Exception as e:
-                    logging.error(f'Failed to execute {command}: {e}')
-                    sys.exit(1)
-        else:
-            logging.warning(f'The module {module_name} cannot be daemonized due to a configuration setting')
-
-def daemonize_processes(polybar_config=None, testing: bool=False):
-    all_modules = sorted([section.replace('module/', '') for section in polybar_config.sections() if section.startswith('module/')])
-    common_modules = sorted(list(set(find_enabled_modules()) & set(all_modules)))
-    for module_name in common_modules:
-        daemonize(module_name=module_name, polybar_config=polybar_config, testing=testing)
-
-def main():
-    debug = True
-    testing = False
+@click.command()
+@click.argument('action', required=False, type=click.Choice(['start', 'stop', 'restart']))
+@click.option('-d', '--debug', is_flag=True, help='Enable debug mode')
+@click.option('-t', '--test', is_flag=True, help='Enable test mode')
+@click.option('-p', '--pid', help='Specify a pid')
+def cli(action, debug, test, pid):
+    """
+    Start and stop polybar
+    """
     configure_logging(debug=debug)
-    initialize()
-    bar_name = 'main'
+    initialize(action)
 
     polybar_config_file = os.path.join(util.get_config_directory(), 'config.ini')
     polybar_config = parse_config(filename=polybar_config_file)
-    if testing:
-        daemonize_processes(polybar_config=polybar_config, testing=testing)
-        sys.exit(0)
 
     # dynamically get all bar names and handle them accordingly!
+    bar_name = 'main'
     if 'bar/main' in polybar_config:
         if 'enable-ipc' in polybar_config['bar/main']:
             ipc_enabled = True if polybar_config['bar/main']['enable-ipc'] == 'true' else False
+
+    if action == 'start':
+        start(polybar_config=polybar_config, bar_name=bar_name, ipc_enabled=ipc_enabled, debug=debug, test=test, pid=pid)
+
+    elif action == 'stop':
+        stop(ipc_enabled=ipc_enabled, pid=pid)
     
-    kill_polybar_if_running(ipc_enabled=ipc_enabled)
-    launch_polybar(bar_name=bar_name)
-    daemonize_processes(polybar_config=polybar_config)
+    elif action == 'restart':
+        stop(ipc_enabled=ipc_enabled)
+        time.sleep(2)
+        start(polybar_config=polybar_config, bar_name=bar_name, ipc_enabled=ipc_enabled,debug=debug, test=test, pid=pid)
 
 if __name__ == '__main__':
-    main()
+    cli()

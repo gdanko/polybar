@@ -61,12 +61,12 @@ label = %output%
 initial = 1
 hook-0 = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto
 click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto --toggle && polybar-msg action memory-usage-clickable hook 0
-daemonize = true
-daemonize-arg-interval = 2
+background = true
+background-arg-interval = 2
 ```
 When the module is executed, `hook-0` is called, which simply displays the default output. The `click-left` action executes the script with `--toggle`, which updates the output format via state file. It also displays the output in the new format.
 
-To accomplish executing these scripts on an interval, I've added two flags, `--daemonize` and `--interval`. The `daemonize-*` parameters are parsed by `launch.py` (which is invoked by the required `launch.sh`). There is logic to manage these scripts so that there aren't multiple copies of them running, etc. Anyhow, when `launch.py` is executed, there is a function that daemonizes the modules that currently support this. In a future release, `launch.py` will do this without them being hardcoded.
+To accomplish executing these scripts on an interval, I've added two flags, `--background` and `--interval`. The `background-*` parameters are parsed by `launch.py` (which is invoked by the required `launch.sh`). There is logic to manage these scripts so that there aren't multiple copies of them running, etc. Anyhow, when `launch.py` is executed, there is a function that launch modules that currently support this in background. In a future release, `launch.py` will do this without them being hardcoded.
 
 Upon invocation, `launch.py` does the following:
 1. Configures the logger
@@ -75,11 +75,11 @@ Upon invocation, `launch.py` does the following:
 4. Parses the configuration file
 5. Determines if IPC is enabled and kills polybar using either `polybar-msg` or `kill`
 6. Re-launches polybar
-7. Daemonizes modules that are configured to do so
+7. Launches scripts that support being launched into the background
 
 If any step in the process fails, the script exits with an explanation as to what caused the failure.
 
-Note, at every interval, a daemonized script will check to see if polybar is running. If it is not running, the script exits on its own. Scripts with a longer interval, e.g., `polybar-speedtest` will take a fair amount of time to exit on their own because it may be in a sleep state.
+Note, at every interval, a backgrounded script will check to see if polybar is running. If it is not running, the script exits on its own. Scripts with a longer interval, e.g., `polybar-speedtest` will take a fair amount of time to exit on their own because it may be in a sleep state.
 
 ## Speedtest Hack
 If there is an official way of doing this, please do tell me. :) I wrote the Speedtest script, but the output wouldn't render until the script completed. It didn'tlike that because the module would just pop in and say "Hello! I'm all done, here are the results!" I wanted something to say show, "Hey, I'm doing work here, please hang tight."
@@ -89,12 +89,12 @@ type = custom/ipc
 label = %output%
 initial = 1
 hook-0 = echo "%{F#F0C674}%{F-} Speedtest running..."
-daemonize = true
-daemonize-arg-download =
-daemonize-arg-upload =
-daemonize-arg-interval = 300
+background = true
+background-arg-download =
+background-arg-upload =
+background-arg-interval = 300
 ```
-All the module does is set the initial text, which is a loading message. But using `launch.py`, I am able to daemonize this module. So as soon as the loading message is up, the script is working in the background, running the test(s). When the script is daemonized, it displays the loading text right before it starts the test(s), so you're always aware that it's working.
+All the module does is set the initial text, which is a loading message. But using `launch.py`, I am able to launch this module in the background. As soon as the loading message is up, the script is working in the background, running the test(s). When the script is running in the background, it displays the loading text right before it starts the test(s), so you're always aware that it's working.
 
 ## Permissions
 You will need to add yourself to `/etc/sudoers` in order to execute some commands. Do something like this. Obviously pick only the ones you need.
