@@ -63,7 +63,7 @@ def get_memory_usage():
         if stderr != '':
             mem_info = MemoryInfo(
                 success = False,
-                error   = stderr.strip(),
+                error   = stderr,
             )
         else:
             mem_info = MemoryInfo(
@@ -74,6 +74,13 @@ def get_memory_usage():
     return mem_info
 
 def main():
+    missing = util.missing_binaries(['free', 'sed'])
+    if len(missing) > 0:
+        error = f'please install: {", ".join(missing)}'
+        output = f'{util.color_title(glyphs.fa_memory)} {util.color_error(error)}'
+        print(output)
+        sys.exit(1)
+
     valid_tokens = ['^pct_total', '^pct_used', '^pct_free', '^total', '^used', '^free']
     parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
     parser.add_argument('-u', '--unit', help='The unit to use for display', choices=util.get_valid_units(), required=False)
