@@ -27,6 +27,9 @@ class CpuInfo(NamedTuple):
     steal     : Optional[float] = 0.0
     guest     : Optional[float] = 0.0
     guestnice : Optional[float] = 0.0
+    load1     : Optional[float] = 0.0
+    load5     : Optional[float] = 0.0
+    load15    : Optional[float] = 0.0
 
 def get_statefile_name() -> str:
     statefile = os.path.basename(__file__)
@@ -73,6 +76,20 @@ def get_cpu_cores():
 
     return -1
 
+def get_load_averages():
+    """
+    Execute uptime and return the load averages
+    """
+    command = 'uptime'
+    rc, stdout, stderr = util.run_piped_command(command)
+    if rc == 0:
+        if stdout != '':
+            match = re.search(r"load average:\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)", stdout)
+            if match:
+                return [float(avg) for avg in list(match.groups())]
+    exit()
+
+
 def get_cpu_info() -> CpuInfo:
     """
     Gather information about the CPU and return it to main()
@@ -88,6 +105,7 @@ def get_cpu_info() -> CpuInfo:
     binary = 'mpstat'
 
     # make sure mpstat is installed
+    load_averages = get_load_averages()
     if util.is_binary_installed(binary):
         rc, stdout, stderr = util.run_piped_command(f'{binary} | tail -n 1')
         if rc == 0:
@@ -109,6 +127,9 @@ def get_cpu_info() -> CpuInfo:
                     steal     = util.pad_float(values[9]),
                     guest     = util.pad_float(values[10]),
                     guestnice = util.pad_float(values[11]),
+                    load1     = util.pad_float(load_averages[0]),
+                    load5     = util.pad_float(load_averages[1]),
+                    load15    = util.pad_float(load_averages[2]),
                 )
             else:
                 cpu_info = CpuInfo(
@@ -139,15 +160,15 @@ def get_cpu_info() -> CpuInfo:
     return cpu_info
 
 def main():
-    mode_count = 2
+    mode_count = 3
     parser = argparse.ArgumentParser(description='Get memory usage from free(1)')
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
-    parser.add_argument('-d', '--daemonize', action='store_true', help='Daemonize', required=False)
+    parser.add_argument('-b', '--background', action='store_true', help='Run this script in the background', required=False)
     args = parser.parse_args()
 
     # Daemon mode: periodic updates
-    if args.daemonize:
+    if args.background:
         # Wait a bit to let Polybar fully initialize
         time.sleep(1)
         while True:
@@ -166,6 +187,8 @@ def main():
                 output = f'{util.color_title(cpu_info.icon)} user {cpu_info.user}%, sys {cpu_info.system}%, idle {cpu_info.idle}%'
             elif mode == 1:
                 output = f'{util.color_title(cpu_info.icon)} {cpu_info.cores} x {cpu_info.model} @ {cpu_info.freq}'
+            elif mode == 2:
+                output = f'{util.color_title(cpu_info.icon)} load {cpu_info.load1},  {cpu_info.load5},  {cpu_info.load15}'
             print(output)
             sys.exit(0)
         else:

@@ -80,7 +80,7 @@ def main():
     parser.add_argument('--upload', action='store_true', help='Test upload speed', required=False)
     parser.add_argument('--bytes', action='store_true', help='Use bytes instead of bits')
     parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
-    parser.add_argument('-d', '--daemonize', action='store_true', help='Daemonize', required=False)
+    parser.add_argument('-b', '--background', action='store_true', help='Run this script in the background', required=False)
     args = parser.parse_args()
 
     if not args.download and not args.upload:
@@ -88,7 +88,7 @@ def main():
         sys.exit(1)
 
     # Daemon mode: periodic updates
-    if args.daemonize:
+    if args.background:
         # Wait a bit to let Polybar fully initialize
         time.sleep(1)
         while True:

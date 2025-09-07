@@ -93,6 +93,16 @@ def polybar_is_running() -> bool:
     rc, stdout, _ = run_piped_command('pgrep -x polybar')
     return True if rc == 0 and stdout != '' else False
 
+def process_is_running(name: str=None, full: bool=False):
+    flag = 'f' if full else 'x'
+    command = f'pgrep -{flag} "{name}"'
+    rc, stdout, stderr = run_piped_command(command)
+    if rc == 0 and stdout != '':
+        pids = stdout.split('\n')
+        return True, pids
+    else:
+        return False, []
+
 def surrogatepass(code):
     return code.encode('utf-16', 'surrogatepass').decode('utf-16')
 

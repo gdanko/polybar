@@ -128,11 +128,11 @@ def main():
     parser.add_argument('-l', '--label', help='For now we need to pass a friendly mountpoint label', required=False)
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
-    parser.add_argument('-d', '--daemonize', action='store_true', help='Daemonize', required=False)
+    parser.add_argument('-b', '--background', action='store_true', help='Run this script in the background', required=False)
     args = parser.parse_args()
 
     # Daemon mode: periodic updates
-    if args.daemonize:
+    if args.background:
         # Wait a bit to let Polybar fully initialize
         time.sleep(1)
         while True:
