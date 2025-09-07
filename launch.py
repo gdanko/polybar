@@ -137,57 +137,47 @@ def daemonize(module_name: str=None, str=None, polybar_config=None, testing: boo
     else:
         script_name = os.path.join(util.get_script_directory(), f'{module_name}.py')
 
-    if not util.file_exists(script_name):
-        logging.error(f'The script {script_name} doesn\'t exist')
-        sys.exit(1)
+    if 'daemonize' in module_config:
+        if module_config['daemonize']:
+            if not util.file_exists(script_name):
+                logging.error(f'The script {script_name} doesn\'t exist')
+                sys.exit(1)
 
-    if not util.file_is_executable(script_name):
-        logging.error(f'The script {script_name} isn\'t executable')
-        sys.exit(1)
+            if not util.file_is_executable(script_name):
+                logging.error(f'The script {script_name} isn\'t executable')
+                sys.exit(1)
 
-    command_bits = [ script_name ]
+            command_bits = [ script_name ]
 
-    if not 'daemonize' in module_config or ('daemonize' in module_config and module_config['daemonize'] == False):
-        logging.warning(f'The module {module_name} cannot be daemonized due to a configuration setting')
-        return
+            for key, value in module_config.items():
+                if key.startswith('daemonize-arg-'):
+                    command_bits.append(f'--{key.split('-')[2]}')
+                    if value and value != '':
+                        command_bits.append(value)
+            command_bits.append('--daemonize')
+            command = ' '.join(command_bits)
+            ps_command_string = f'python3 {command}'
 
-    for key, value in module_config.items():
-        if key.startswith('daemonize-arg-'):
-            command_bits.append(f'--{key.split('-')[2]}')
-            if value and value != '':
-                command_bits.append(value)
-    command_bits.append('--daemonize')
-    command = ' '.join(command_bits)
-    ps_command_string = f'python3 {command}'
+            if testing:
+                print(command)
+                print(ps_command_string)
+            else:
+                kill_if_running(ps_command_string=ps_command_string)
 
-    if testing:
-        print(command)
-        print(ps_command_string)
-        sys.exit(0)
-
-    kill_if_running(ps_command_string=ps_command_string)
-
-    try:
-        logging.debug(f'Attempting to daemonize {os.path.basename(script_name)} with {command}')
-        _ = util.run_piped_command(command=command, background=True)
-    except Exception as e:
-        logging.error(f'Failed to execute {command}: {e}')
-        sys.exit(1)
+                try:
+                    logging.debug(f'Attempting to daemonize {os.path.basename(script_name)} with {command}')
+                    _ = util.run_piped_command(command=command, background=True)
+                except Exception as e:
+                    logging.error(f'Failed to execute {command}: {e}')
+                    sys.exit(1)
+        else:
+            logging.warning(f'The module {module_name} cannot be daemonized due to a configuration setting')
 
 def daemonize_processes(polybar_config=None, testing: bool=False):
-    enabled_modules = find_enabled_modules()
-
-    # Standard modules
-    standard_modules = ['cpu-usage-clickable', 'memory-usage-clickable', 'swap-usage-clickable', 'polybar-speedtest']
-    for module_name in standard_modules:
-        if module_name in enabled_modules:
-            daemonize(module_name=module_name, polybar_config=polybar_config)
-
-    # Non-standard modules
-    module_name = 'filesystem-usage-clickable'
-    filesystems = [module for module in enabled_modules if module.startswith('filesystem-usage-clickable-')]
-    for filesystem in filesystems:
-        daemonize(module_name=filesystem, polybar_config=polybar_config, testing=testing)
+    all_modules = sorted([section.replace('module/', '') for section in polybar_config.sections() if section.startswith('module/')])
+    common_modules = sorted(list(set(find_enabled_modules()) & set(all_modules)))
+    for module_name in common_modules:
+        daemonize(module_name=module_name, polybar_config=polybar_config, testing=testing)
 
 def main():
     debug = True
