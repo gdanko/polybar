@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 from polybar import glyphs, util
+from typing import Any, Dict, List, Optional, NamedTuple
 import argparse
-import os
 import re
 import sys
 
@@ -25,74 +24,80 @@ def get_status_icon(signal):
     elif signal >= -90:
         return glyphs.md_wifi_strength_alert_outline
 
+class WifiStatus(NamedTuple):
+    success   : Optional[bool] = False
+    error     : Optional[str]  = None
+    interface : Optional[str]  = None
+    signal    : Optional[int]  = 0
+
 def get_wifi_status(interface):
     """
-    Execute iwconfig against each interface to get its status
+    Execute iwconfig against each interface to get its status as a namedtuple
     """
 
-    binary = 'iwconfig'
     statuses = []
+    command = f'iwconfig {interface}'
 
-    if util.is_binary_installed(binary):
-        rc, stdout, stderr = util.run_piped_command(f'{binary} {interface}')
-        if rc == 0:
-            if stdout != '':
-                match = re.search(r"Signal level=(-?\d+)\s*dBm", stdout)
-                if match:
-                    status_dict = {
-                        'success':   True,
-                        'interface': interface,
-                        'signal':    int(match.group(1)),
-                    }
-                else:
-                    status_dict = {
-                        'success':   False,
-                        'interface': interface,
-                        'error':     f'regex failure on output',
-                    }
+    rc, stdout, stderr = util.run_piped_command(command)
+    if rc == 0:
+        if stdout != '':
+            match = re.search(r"Signal level=(-?\d+)\s*dBm", stdout)
+            if match:
+                wifi_status = WifiStatus(
+                    success   = True,
+                    interface = interface,
+                    signal    = int(match.group(1)),
+                )
             else:
-                status_dict = {
-                    'success':   False,
-                    'interface': interface,
-                    'error':     f'no output from iwconfig {interface}',
-                }
+                wifi_status = WifiStatus(
+                    success   = True,
+                    interface = interface,
+                    error     = f'regex failure on output',
+                )
         else:
-            if stderr != '':
-                status_dict = {
-                    'success':   False,
-                    'interface': interface,
-                    'error':     stderr.strip(),
-                }
-            else:
-                status_dict = {
-                    'success':   False,
-                    'interface': interface,
-                    'error':     f'non-zero exit code',
-                }
+            status_dict = {
+                'success':   False,
+                'interface': interface,
+                'error':     f'no output from iwconfig {interface}',
+            }
     else:
-        status_dict = {
-            'success':   False,
-            'interface': '',
-            'error':     f'please install {binary}'
-        }
+        if stderr != '':
+            wifi_status = WifiStatus(
+                success   = True,
+                interface = interface,
+                error     = stderr,
+            )
+        else:
+            wifi_status = WifiStatus(
+                success   = True,
+                interface = interface,
+                error     = f'failed to execute {command}',
+            )
     
-    return status_dict
+    return wifi_status
 
 def main():
+    missing = util.missing_binaries(['iwconfig'])
+    if len(missing) > 0:
+        error = f'please install: {", ".join(missing)}'
+        output = f'{util.color_title(glyphs.md_wifi_strength_alert_outline)} {util.color_error(error)}'
+        print(output)
+        sys.exit(1)
+
     parser = argparse.ArgumentParser(description="Get WiFi status from iwconfig(8)")
     parser.add_argument("-i", "--interface", help="The interface to check", required=True)
     args = parser.parse_args()
     
     wifi_status = get_wifi_status(args.interface)
 
-    if wifi_status['success']:
-        wifi_icon = get_status_icon(wifi_status['signal'])
-        print(f'{util.color_title(wifi_icon)} {wifi_status["interface"]} {wifi_status["signal"]} dBm')
+    if wifi_status.success:
+        wifi_icon = get_status_icon(wifi_status.signal)
+        print(f'{util.color_title(wifi_icon)} {wifi_status.interface} {wifi_status.signal} dBm')
         sys.exit(0)
     else:
         wifi_icon = glyphs.md_wifi_strength_alert_outline
-        print(f'{util.color_title(wifi_icon)} {wifi_status["interface"]} {wifi_status["error"]}')
+        print(f'{util.color_title(wifi_icon)} {wifi_status.interface} {wifi_status.error}')
         sys.exit(1)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
