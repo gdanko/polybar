@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from collections import namedtuple
-from pathlib import Path
 from polybar import glyphs, state, util
 from typing import Any, Dict, List, Optional, NamedTuple
 from urllib.parse import quote, urlunparse
