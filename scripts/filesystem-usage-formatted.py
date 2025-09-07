@@ -20,17 +20,16 @@ class FilesystemInfo(NamedTuple):
 
 def get_disk_usage(mountpoint: str) -> list:
     """
-    Execute df -k against a mount point and return a dictionary with its values
+    Execute df -B 1 against a mount point and return a namedtuple with its values
     """
 
-    if util.is_binary_installed('findmnt'):
-        rc, stdout, stderr = util.run_piped_command(f'findmnt {mountpoint}')
-        if rc != 0:
-            return FilesystemInfo(
-                success    = False,
-                mountpoint = mountpoint,
-                error      = f'{mountpoint} does not exist'
-            )
+    rc, stdout, stderr = util.run_piped_command(f'findmnt {mountpoint}')
+    if rc != 0:
+        return FilesystemInfo(
+            success    = False,
+            mountpoint = mountpoint,
+            error      = f'{mountpoint} does not exist'
+        )
 
     command = f'df -B 1 {mountpoint} | sed -n "2p"'
     rc, stdout, stderr = util.run_piped_command(command)
@@ -69,18 +68,25 @@ def get_disk_usage(mountpoint: str) -> list:
             filesystem_info = FilesystemInfo(
                 success    = True,
                 mountpoint = mountpoint,
-                error      = f'{mountpoint} {stderr.strip()}',
+                error      = f'{mountpoint} {stderr}',
             )
         else:
             filesystem_info = FilesystemInfo(
                 success    = True,
                 mountpoint = mountpoint,
-                error      = f'{mountpoint} non-zero exit code'
+                error      = f'{mountpoint} failed to execute {command}'
             )
 
     return filesystem_info
 
 def main():
+    missing = util.missing_binaries(['df', 'findmnt', 'sed'])
+    if len(missing) > 0:
+        error = f'please install: {", ".join(missing)}'
+        output = f'{util.color_title(glyphs.md_harddisk)} {util.color_error(error)}'
+        print(output)
+        sys.exit(1)
+
     valid_tokens = ['^pct_total', '^pct_used', '^pct_free', '^total', '^used', '^free']
     parser = argparse.ArgumentParser(description='Get disk info from df(1)')
     parser.add_argument('-m', '--mountpoint', help='The mountpoint to check', required=True)
