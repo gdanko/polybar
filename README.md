@@ -112,3 +112,6 @@ user ALL=(ALL) NOPASSWD: /usr/bin/yum
 
 ## Configuration
 Please see `config.ini.example` to see how I wired everything
+
+## To Do
+Dynamically parse the bars and launch them all
