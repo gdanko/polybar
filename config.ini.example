@@ -230,7 +230,7 @@ hook-1 = ~/.config/polybar/scripts/speedtest.py run
 ; On click, trigger a new test
 click-left = ~/.config/polybar/scripts/speedtest.py run
 background = false
-background-arg-interval = 300
+background-arg-interval = 60
 background-arg-download =
 background-arg-upload =
 
