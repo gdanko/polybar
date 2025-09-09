@@ -19,11 +19,6 @@ except ImportError:
     print(f'Please install click via pip')
     sys.exit(1)
 
-class TestResult(NamedTuple):
-    success : Optional[bool] = False
-    error   : Optional[str]  = None
-    bps     : Optional[int]  = -1
-
 TMPFILE = Path.home() / ".polybar-speedtest-result.txt"
 LOGFILE = Path.home() / ".polybar-speedtest-result.log"
 LOADING = f'{util.color_title(glyphs.fa_arrow_rotate_right)} Speedtest running...'
@@ -108,6 +103,7 @@ def run_speedtest(download=True, upload=True, bytes=False):
     command = [
         'speedtest-cli',
         '--simple',
+        '--secure',
     ]
 
     if not download:
