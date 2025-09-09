@@ -61,7 +61,7 @@ def get_speeds(text: str=None, key: str=None):
     except:
         network_speed = None
 
-    return ping_speed, network_speed
+    return float(ping_speed), network_speed
     
 def parse_speedtest_output(output: str=None, download: bool=False, upload: bool=False, bytes: bool=False) -> str:
     """
@@ -89,7 +89,7 @@ def parse_speedtest_output(output: str=None, download: bool=False, upload: bool=
     
     parts = []
     if ping_time:
-        parts.append(f'ping {ping_time} ms')
+        parts.append(f'ping {util.pad_float(ping_time)} ms')
 
     if download:
         if download_speed:
