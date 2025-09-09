@@ -178,12 +178,12 @@ def run(download, upload, bytes, background, interval):
         start_new_session=True
     )
 
-    subprocess.run(["polybar-msg", "action", "#speedtest.hook.0"])
+    subprocess.run(['polybar-msg', 'action', '#speedtest.hook.0'])
 
-@cli.command(name="worker")
-@click.argument("download", type=int)
-@click.argument("upload", type=int)
-@click.argument("bytes", type=int)
+@cli.command(name='worker')
+@click.argument('download', type=int)
+@click.argument('upload', type=int)
+@click.argument('bytes', type=int)
 def worker(download, upload, bytes):
     """
     Internal worker
