@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+
 from pathlib import Path
 from polybar import glyphs, util
-from typing import Any, Dict, List, Optional, NamedTuple
 import click
 import logging
 import re
