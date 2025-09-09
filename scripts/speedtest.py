@@ -39,22 +39,29 @@ def get_icon(speed: int=0) -> str:
     elif speed >= 500000000:
         return glyphs.md_speedometer_fast
 
-def get_bits_per_second(text: str=None, key: str=None):
+def get_speeds(text: str=None, key: str=None):
     unit_map = {
         'Kbit/s': 1_000,
         'Mbit/s': 1_000_000,
         'Gbit/s': 1_000_000_000,
     }
+    ping_speed = None
+    network_speed = None
+
+    match = re.search(rf"Ping:\s+([\d.]+)\s+ms", text)
+    if match:
+        ping_speed = match.group(1)
 
     try:
         match = re.search(rf"{key}:\s+([\d.]+)\s+([KMG]bit/s)", text)
         if match:
             value = float(match.group(1))
             unit  = match.group(2)
-            return int(value * unit_map[unit])
-        return None
+            network_speed = int(value * unit_map[unit])
     except:
-        return None
+        network_speed = None
+
+    return ping_speed, network_speed
     
 def parse_speedtest_output(output: str=None, download: bool=False, upload: bool=False, bytes: bool=False) -> str:
     """
@@ -65,10 +72,10 @@ def parse_speedtest_output(output: str=None, download: bool=False, upload: bool=
     icon = glyphs.md_speedometer_slow
 
     if download:
-        download_speed = get_bits_per_second(output, 'Download')
+        ping_time, download_speed = get_speeds(output, 'Download')
     
     if upload:
-        upload_speed = get_bits_per_second(output, 'Upload')
+        ping_time, upload_speed = get_speeds(output, 'Upload')
     
     if download and upload:
         if download_speed and upload_speed:
@@ -81,6 +88,9 @@ def parse_speedtest_output(output: str=None, download: bool=False, upload: bool=
             icon = get_icon(speed=upload_speed)
     
     parts = []
+    if ping_time:
+        parts.append(f'ping {ping_time} ms')
+
     if download:
         if download_speed:
             parts.append(f'{glyphs.cod_arrow_small_down}{util.network_speed(number=download_speed, bytes=bytes)}')
@@ -89,7 +99,7 @@ def parse_speedtest_output(output: str=None, download: bool=False, upload: bool=
         if upload_speed:
             parts.append(f'{glyphs.cod_arrow_small_up}{util.network_speed(number=upload_speed, bytes=bytes)}')
     
-    if len(parts) > 0:
+    if len(parts) > 1:
         return f'{util.color_title(icon)} {' '.join(parts)}'
     else:
         return f'{util.color_title(icon)} {util.color_error("All tests failed")}'
