@@ -6,17 +6,19 @@ import click
 import logging
 import re
 import subprocess
+import sys
 
-try:
-    import speedtest
-except ImportError:
-    print(f'Please install speedtest-cli via pip')
-    sys.exit(1)
+modules = ['click', 'speedtest']
+missing = []
 
-try:
-    import click
-except ImportError:
-    print(f'Please install click via pip')
+for module in modules:
+    try:
+        __import__(module)
+    except ImportError:
+        missing.append(module)
+
+if missing:
+    util.print_error(icon=glyphs.md_network_off_outline, message=f'Please install via pip: {", ".join(missing)}')
     sys.exit(1)
 
 TMPFILE = Path.home() / ".polybar-speedtest-result.txt"
