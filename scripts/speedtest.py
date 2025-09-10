@@ -13,12 +13,11 @@ missing = []
 
 for module in modules:
     try:
-        __import__(module)
+        globals()[module] = __import__(module)
     except ImportError:
         missing.append(module)
-
 if missing:
-    util.print_error(icon=glyphs.md_network_off_outline, message=f'Please install via pip: {", ".join(missing)}')
+    util.print_error(icon=glyphs.md_alert, message=f'Please install via pip: {", ".join(missing)}')
     sys.exit(1)
 
 TMPFILE = Path.home() / ".polybar-speedtest-result.txt"
