@@ -51,8 +51,8 @@ def parse_config(filename: str=None):
     try:
         parser = configparser.ConfigParser(interpolation=None)
         parser.read(filename)
-    except:
-        logging.error(f'Failed to parse the config file {filename}')
+    except Exception as e:
+        logging.error(f'Failed to parse the config file {filename}: {e}')
         sys.exit(1)
 
     return parser
@@ -150,6 +150,9 @@ def background(module_name: str=None, str=None, polybar_config=None, testing: bo
                 sys.exit(1)
 
             command_bits = [ script_name ]
+
+            if 'background-action' in module_config:
+                command_bits.append(module_config['background-action'])
 
             for key, value in module_config.items():
                 if key.startswith('background-arg-'):
