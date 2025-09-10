@@ -25,40 +25,6 @@ if missing:
 def pprint(input):
     pp(input)
 
-def run_piped_command_old(command: str=None):
-    """
-    Run a shell-like command with pipes using subprocess.
-    Returns (return_code, stdout, stderr).
-    """
-    # Split pipeline parts
-    parts = [shlex.split(cmd.strip()) for cmd in command.split('|')]
-    
-    processes = []
-    prev_stdout = None
-    
-    # Create subprocesses for each stage
-    for i, part in enumerate(parts):
-        proc = subprocess.Popen(
-            part,
-            stdin=prev_stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE if i == len(parts) - 1 else subprocess.PIPE
-        )
-        
-        if prev_stdout:
-            prev_stdout.close()  # Allow upstream process to receive SIGPIPE
-        prev_stdout = proc.stdout
-        processes.append(proc)
-
-    # Get output from the last process
-    stdout, stderr = processes[-1].communicate()
-    
-    # Wait for all processes
-    for p in processes[:-1]:
-        p.wait()
-
-    return processes[-1].returncode, stdout.decode().strip(), stderr.decode().strip()
-
 def run_piped_command(command: str=None, background: bool=False) -> Union[
     Tuple[int, bytes, bytes],  # blocking mode
     List[subprocess.Popen]     # background mode
