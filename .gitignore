@@ -15,12 +15,9 @@ scripts/generate-config-example.sh
 
 # Test files
 config.ini.test
-dummy.sh
+dummy.*
 example.sh
 menu-test.sh
 weather.sh
 
-pacman-output.txt
-snap-output.txt
-yay-output.txt
-yum-output.txt
+*-output.txt
