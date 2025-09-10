@@ -9,6 +9,19 @@ import shutil
 import socket
 import subprocess
 
+modules = ['psutil']
+missing = []
+
+for module in modules:
+    try:
+        __import__(module)
+    except ImportError:
+        missing.append(module)
+
+if missing:
+    print_error(icon=glyphs.md_network_off_outline, message=f'Please install via pip: {", ".join(missing)}')
+    sys.exit(1)
+
 def pprint(input):
     pp(input)
 
@@ -258,3 +271,31 @@ def to_snake_case(s: str) -> str:
     s = re.sub(r'_+', '_', s)
     # Strip leading/trailing underscores, lowercase
     return s.strip('_').lower()
+
+def is_worker_running(lockfile: Path) -> bool:
+    """
+    Determine if a worker for a given module is running
+    """
+
+    if not lockfile.exists():
+        return False
+    try:
+        pid = int(lockfile.read_text())
+        proc = psutil.Process(pid)
+        cmdline = proc.cmdline()
+        # Only consider it running if it's our script with 'worker' arg
+        if __file__ in cmdline[0] and 'worker' in cmdline:
+            return True
+        else:
+            lockfile.unlink()
+            return False
+    except (ValueError, FileNotFoundError, psutil.NoSuchProcess, PermissionError):
+        # Stale lockfile
+        try:
+            lockfile.unlink()
+        except Exception:
+            pass
+        return False
+
+def print_error(icon: str=None, message: str=None):
+    print(f'{color_title(icon)} {color_error(message)}')
