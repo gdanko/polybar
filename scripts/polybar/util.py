@@ -213,7 +213,7 @@ def color_title(text: str='') -> str:
     return f'{start_color_title}{text}{end_color_title}'
 
 def color_error(text: str='') -> str:
-    start_color_title = '%{F#F00}'
+    start_color_title = '%{F#707880}'
     end_color_title = '%{F-}'
     return f'{start_color_title}{text}{end_color_title}'
 
