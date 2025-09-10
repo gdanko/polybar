@@ -67,7 +67,7 @@ font-2 = "Noto Sans:size=11;1"
 font-3 = "Arimo Nerd Font:size=14;2"
 
 modules-left =
-modules-right = network-throughput wlan-wlo1 speedtest filesystem-usage-clickable-root filesystem-usage-clickable-work memory-usage-clickable swap-usage-clickable cpu-usage-clickable weather-san-diego
+modules-right = network-throughput-wlo1 wlan-wlo1 speedtest filesystem-usage-clickable-root filesystem-usage-clickable-work memory-usage-clickable cpu-usage-clickable system-updates-apt system-updates-flatpak weather-san-diego
 
 cursor-click = pointer
 cursor-scroll = ns-resize
@@ -197,22 +197,44 @@ background-arg-interval = 5
 
 ;==========================================================
 ;  Network
+;
+;  down arrow = cod_arrow_small_down
+;  up arrow   = cod_arrow_small_up
+;  wifi up    = md_wifi_strength_4
+;  wifi down  = md_wifi_strength_off
+;  wired up   = md-network
+;  wired down = md-network_off
 ;==========================================================
 
-[network-base]
+[network-wifi-base]
 type = internal/network
+interface-type = wireless
 interval = 5
 format = <label>
 format-connected = <label-connected>
 format-disconnected = <label-disconnected>
-label-disconnected = %{F#F0C674}%ifname%%{F#707880} disconnected
+label-connected = %{F#F0C674}󰤨%{F-} %ifname% %downspeed% %upspeed%
+label-disconnected = %{F#F0C674}󰤭%{F#707880} %ifname% disconnected
 
-[module/network-throughput]
-inherit = network-base
+[network-wired-base]
+type = internal/network
+interface-type = wired
+interval = 5
+format = <label>
+format-connected = <label-connected>
+format-disconnected = <label-disconnected>
+label-connected = %{F#F0C674}󰛳%{F-} %ifname% %downspeed% %upspeed%
+label-disconnected = %{F#F0C674}󰲛%{F#707880} %ifname% disconnected
+
+[module/network-throughput-wlo1]
+inherit = network-wifi-base
 interface = wlo1
 interval = 2
-interface-type = wireless
-label-connected = %{F#F0C674}%ifname%%{F-} %downspeed% RX / %upspeed% TX
+
+[module/network-throughput-enp1s0]
+inherit = network-wired-base
+interface = enp1s0
+interval = 2
 
 ;==========================================================
 ;  Speedtest
@@ -229,7 +251,8 @@ hook-0 = ~/.config/polybar/scripts/speedtest.py show
 hook-1 = ~/.config/polybar/scripts/speedtest.py run
 ; On click, trigger a new test
 click-left = ~/.config/polybar/scripts/speedtest.py run
-background = false
+background = true
+background-action = run
 background-arg-interval = 60
 background-arg-download =
 background-arg-upload =
@@ -281,25 +304,48 @@ background-arg-interval = 2
 ;==========================================================
 
 [system-updates-base]
-type = custom/script
-interval = 3600
-exec = ~/.config/polybar/scripts/system-updates.py --type "$type"
+type = custom/ipc
+label = %output%
+initial = 1
 
-[module/apt-updates]
+[module/system-updates-apt]
 inherit = system-updates-base
-env-type = "apt"
+hook-0 = ~/.config/polybar/scripts/system-updates-test.py show --type apt
+hook-1 = ~/.config/polybar/scripts/system-updates-test.py run --type apt
+click-left = ~/.config/polybar/scripts/system-updates-test.py run --type apt
+background = true
+background-action = run
+background-script = system-updates-test.py
+background-arg-interval = 1800
+background-arg-type = apt
 
-[module/brew-updates]
+[module/system-updates-flatpak]
 inherit = system-updates-base
-env-type = "brew"
+hook-0 = ~/.config/polybar/scripts/system-updates-test.py show --type flatpak
+hook-1 = ~/.config/polybar/scripts/system-updates-test.py run --type flatpak
+click-left = ~/.config/polybar/scripts/system-updates-test.py run --type flatpak
+background = true
+background-action = run
+background-script = system-updates-test.py
+background-arg-interval = 1800
+background-arg-type = flatpak
 
-[module/flatpak-updates]
-inherit = system-updates-base
-env-type = "flatpak"
-
-[module/mint-updates]
-inherit = system-updates-base
-env-type = "mintupdate"
+[module/speedtest-off]
+type = custom/ipc
+label = %output%
+; Run both commands on startup:
+;   hook-0 = show results (last test or "loading")
+;   hook-1 = start a new test in the background
+initial = 1
+hook-0 = ~/.config/polybar/scripts/speedtest.py show
+hook-1 = ~/.config/polybar/scripts/speedtest.py run
+; On click, trigger a new test
+click-left = ~/.config/polybar/scripts/speedtest.py run
+background = true
+background-action = run
+background-arg-interval = 60
+background-arg-download =
+background-arg-upload =
 
 ;==========================================================
 ;  Systray
