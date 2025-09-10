@@ -11,17 +11,23 @@ def get_status_icon(signal):
     Return a wifi icon based on signal strength
     """
 
-    if signal >= 30:
+    # -30 dBm to -50 dBm is considered excellent or very good 
+    # -50 dBm to -67 dBm is considered good and suitable for most applications, including streaming and video conferencing 
+    # -67 dBm to -70 dBm is the minimum recommended for reliable performance, with -70 dBm being the threshold for acceptable packet delivery 
+    # signals below -70 dBm, such as -80 dBm, are considered poor and may result in unreliable connectivity and slower speeds 
+    # signals below -90 dBm are typically unusable.
+
+    if -50 <= signal <= -30:
         return glyphs.md_wifi_strength_4
-    elif signal >= -50:
+    elif -67 <= signal < -50:
         return glyphs.md_wifi_strength_3
-    elif signal >= -60:
+    elif -70 <= signal < -67:
         return glyphs.md_wifi_strength_2
-    elif signal >= -70:
+    elif -80 < signal < -70:
         return glyphs.md_wifi_strength_1
-    elif signal >= -80:
+    elif -90 < signal < -80:
         return glyphs.md_wifi_strength_outline
-    elif signal >= -90:
+    else:  # signal_dbm <= -90
         return glyphs.md_wifi_strength_alert_outline
 
 class WifiStatus(NamedTuple):
@@ -34,7 +40,6 @@ def get_wifi_status(interface):
     """
     Execute iwconfig against each interface to get its status as a namedtuple
     """
-
     statuses = []
     command = f'iwconfig {interface}'
     rc, stdout, stderr = util.run_piped_command(command)
