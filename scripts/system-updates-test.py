@@ -13,16 +13,17 @@ import sys
 import time
 import json
 
-try:
-    import click
-except ImportError:
-    print(f'Please install click via pip')
-    sys.exit(1)
+modules = ['click']
+missing = []
 
-try:
-    import psutil
-except ImportError:
-    print(f'Please install psutil via pip')
+for module in modules:
+    try:
+        __import__(module)
+    except ImportError:
+        missing.append(module)
+
+if missing:
+    util.print_error(icon=glyphs.md_network_off_outline, message=f'Please install via pip: {", ".join(missing)}')
     sys.exit(1)
 
 class Package(NamedTuple):
@@ -50,6 +51,12 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+def get_lockfile(package_type: str) -> Path:
+    """
+    Return the name of the lockfile
+    """
+    return Path.home() / f'.polybar-system-update-{package_type}.lock'
+
 def worker_cleanup(lockfile: Path):
     if lockfile.exists():
         lockfile.unlink()
@@ -73,7 +80,6 @@ def find_apt_updates(package_type: str = None):
     """
     Execute apt to search for new updates
     """
-
     logging.info(f'[find_apt_updates] entering function, type={package_type}')
 
     command = f'sudo apt update'
@@ -108,7 +114,6 @@ def find_brew_updates(package_type: str = None):
     """
     Execute brew to search for new updates
     """
-
     logging.info(f'[find_brew_updates] entering function, type={package_type}')
 
     command = f'brew update'
@@ -160,7 +165,6 @@ def find_dnf_updates(package_type: str=None):
     """
     Execute dnf to search for new updates
     """
-
     logging.info(f'[find_dnf_updates] entering function, type={package_type}')
 
     command = f'sudo dnf update -y'
@@ -206,7 +210,6 @@ def find_flatpak_updates(package_type: str=None):
     """
     Execute flatpak to search for new updates
     """
-
     logging.info(f'[find_flatpak_updates] entering function, type={package_type}')
 
     command = f'sudo flatpak update --appstream'
@@ -220,19 +223,23 @@ def find_flatpak_updates(package_type: str=None):
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
         packages = []
-        lines = stdout.split('\n')
-        for line in lines:
-            bits = re.split(r'\s+', line)
-            packages.append(
-                Package(
-                    CurrentVersion=bits[1],
-                    Name=bits[0],
+        if stdout == '':
+            logging.info(f'[find_flatpak_updates] returning data, package_type={package_type}')
+            return SystemUpdates(success=True, count=len(packages), packages=packages)
+        else:
+            lines = stdout.split('\n')
+            for line in lines:
+                bits = re.split(r'\s+', line)
+                packages.append(
+                    Package(
+                        CurrentVersion=bits[1],
+                        Name=bits[0],
+                    )
                 )
-            )
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
  
-    logging.info(f'[find_dnf_updates] returning data, package_type={package_type}')
+    logging.info(f'[find_flatpak_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
 
 def find_mint_updates(package_type: str=None):
@@ -265,7 +272,6 @@ def find_pacman_updates(package_type: str=None):
     """
     Execute pacman to search for new updates
     """
-
     logging.info(f'[find_pacman_updates] entering function, type={package_type}')
 
     command = f'sudo pacman -Qu'
@@ -308,7 +314,6 @@ def find_snap_updates(package_type: str=None):
     """
     Execute snap to search for new updates
     """
-
     logging.info(f'[find_snap_updates] entering function, type={package_type}')
 
     command = f'sudo snap refresh --list'
@@ -347,7 +352,6 @@ def find_yay_updates(package_type: str=None, aur: bool=False):
     """
     Execute yay to search for new updates
     """
-
     logging.info(f'[find_yay_updates] entering function, type={package_type}, aur={aur}')
 
     command = f'sudo yay -Qua'
@@ -373,7 +377,6 @@ def find_yay_updates(package_type: str=None, aur: bool=False):
             )
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
-
 
     # This is here to test locally as I don't have yay
     # with open(os.path.join(util.get_script_directory(), 'yay-output.txt'), 'r', encoding='utf-8') as f:
@@ -403,7 +406,6 @@ def find_yum_updates(package_type: str=None):
     """
     Execute yum to search for new updates
     """
-
     logging.info(f'[find_yum_updates] entering function, type={package_type}')
 
     command = f'sudo yum update -y'
@@ -449,7 +451,6 @@ def find_updates(package_type: str = ''):
     """
     Determine which function is required to get the updates
     """
-
     logging.info(f'[find_updates] type={package_type}')
     tempfile = get_tempfile_name(package_type=package_type)
 
@@ -485,7 +486,6 @@ def cli():
     """
     System update checker
     """
-
     pass
 
 @cli.command()
@@ -502,38 +502,6 @@ def show(type):
         logging.info(f'[show] TMPFILE does not exist')
         print(LOADING)
 
-def get_lockfile(package_type: str) -> Path:
-    """
-    Return the name of the lockfile
-    """
-
-    return Path.home() / f'.polybar-system-update-{package_type}.lock'
-
-def is_worker_running(lockfile: Path) -> bool:
-    """
-    Determine if a worker for a given package type is running
-    """
-
-    if not lockfile.exists():
-        return False
-    try:
-        pid = int(lockfile.read_text())
-        proc = psutil.Process(pid)
-        cmdline = proc.cmdline()
-        # Only consider it running if it's our script with 'worker' arg
-        if __file__ in cmdline[0] and 'worker' in cmdline:
-            return True
-        else:
-            lockfile.unlink()
-            return False
-    except (ValueError, FileNotFoundError, psutil.NoSuchProcess, PermissionError):
-        # Stale lockfile
-        try:
-            lockfile.unlink()
-        except Exception:
-            pass
-        return False
-
 @cli.command(help='Check available system updates from different sources')
 @click.option('-t', '--type', required=True, help=f'The type of update to query; valid choices are: {", ".join(VALID_TYPES)}')
 @click.option('-b', '--background', is_flag=True, default=False, help='Run in the background')
@@ -542,6 +510,9 @@ def run(type, background, interval):
     """
     Run update check once or as a daemon
     """
+    if not util.network_is_reachable():
+        print(f'{util.color_title(glyphs.md_network_off_outline)} {util.color_error("the network is unreachable")}')
+        sys.exit(1)
 
     tempfile = get_tempfile_name(package_type=type)
     write_tempfile(tempfile, LOADING)
@@ -550,12 +521,12 @@ def run(type, background, interval):
     lockfile = get_lockfile(type)
 
     if background:
-        if is_worker_running(lockfile):
+        if util.is_worker_running(lockfile):
             logging.info(f'[run] worker already running for {type}, exiting')
             return
 
         subprocess.run(['polybar-msg', 'action', f'#system-updates-{type}.send.{LOADING}'])
-        logging.info(f"[run] launching background worker - package_type={type}, interval={interval}")
+        logging.info(f'[run] launching background worker - package_type={type}, interval={interval}')
 
         subprocess.Popen(
             [__file__, 'worker', type, '1', str(interval)],
@@ -566,7 +537,6 @@ def run(type, background, interval):
         )
         subprocess.run(['polybar-msg', 'action', f'#system-updates-{type}.hook.0'])
     else:
-        # Foreground: run once
         subprocess.run(['polybar-msg', 'action', f'#system-updates-{type}.send.{LOADING}'])
         logging.info(f'[run] running in foreground - package_type={type}')
         find_updates(package_type=type)
@@ -584,7 +554,7 @@ def worker(package_type, background, interval):
     pid = os.getpid()
 
     if background:
-        if is_worker_running(lockfile):
+        if util.is_worker_running(lockfile):
             logging.info(f'[worker] worker already running for {package_type}, exiting')
             return
 
@@ -618,7 +588,6 @@ def worker(package_type, background, interval):
     else:
         logging.info(f'[worker] foreground worker - package_type={package_type}')
         find_updates(package_type=package_type)
-
 
 if __name__ == '__main__':
     cli()
