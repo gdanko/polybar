@@ -522,7 +522,7 @@ def worker(package_type, background, interval):
         finally:
             if lockfile.exists():
                 lockfile.unlink()
-                logging.info(f'[worker] lockfile removed for {package_type}')
+                logging.info(f'[worker] lockfile removed for {lockfile.stem}')
 
 
 if __name__ == '__main__':
