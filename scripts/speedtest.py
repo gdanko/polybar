@@ -8,17 +8,10 @@ import re
 import subprocess
 import sys
 
-modules = ['click', 'speedtest']
-missing = []
+util.validate_requirements(required=['click', 'speedtest'])
 
-for module in modules:
-    try:
-        globals()[module] = __import__(module)
-    except ImportError:
-        missing.append(module)
-if missing:
-    util.print_error(icon=glyphs.md_alert, message=f'Please install via pip: {", ".join(missing)}')
-    sys.exit(1)
+import click
+import speedtest
 
 TMPFILE = Path.home() / ".polybar-speedtest-result.txt"
 LOGFILE = Path.home() / ".polybar-speedtest-result.log"
