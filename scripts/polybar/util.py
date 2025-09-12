@@ -1,6 +1,7 @@
 from pathlib import Path
 from pprint import pprint as pp
 from typing import List, Tuple, Optional, Union
+import importlib.util
 import json
 import os
 import re
@@ -8,6 +9,7 @@ import shlex
 import shutil
 import socket
 import subprocess
+import sys
 
 modules = ['psutil']
 missing = []
@@ -19,7 +21,7 @@ for module in modules:
         missing.append(module)
 
 if missing:
-    print_error(icon=glyphs.md_network_off_outline, message=f'Please install via pip: {", ".join(missing)}')
+    error_exit(icon=glyphs.md_network_off_outline, message=f'Please install via pip: {", ".join(missing)}')
     sys.exit(1)
 
 def pprint(input):
@@ -263,5 +265,29 @@ def is_worker_running(lockfile: Path) -> bool:
             pass
         return False
 
-def print_error(icon: str=None, message: str=None):
+def error_exit(icon: str=None, message: str=None):
     print(f'{color_title(icon)} {color_error(message)}')
+    sys.exit(1)
+
+def check_network():
+    if not network_is_reachable():
+        # How to immport glyphs?
+        error_exit(
+            icon    = surrogatepass('\udb83\udc9c'),
+            message = 'the network is unreachable',
+        )
+
+def validate_requirements(required: list=[]):
+    missing = []
+
+    for module in required:
+        if importlib.util.find_spec(module) is None:
+            missing.append(module)
+
+    if missing:
+        icon = surrogatepass('\udb80\udc26')
+        error_exit(
+            icon    = icon,
+            message = f'Please install via pip: {", ".join(missing)}',
+        )
+
