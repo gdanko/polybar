@@ -8,7 +8,6 @@ import re
 import sys
 import time
 
-
 class DIMMInfo(NamedTuple):
     configured_voltage : Optional[str] = None
     data_width         : Optional[int] = 0
