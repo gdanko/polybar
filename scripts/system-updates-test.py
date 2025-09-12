@@ -13,31 +13,15 @@ import sys
 import time
 import json
 
-modules = ['click']
-missing = []
+util.validate_requirements(required=['click'])
 
-for module in modules:
-    try:
-        globals()[module] = __import__(module)
-    except ImportError:
-        missing.append(module)
-
-if missing:
-    util.print_error(icon=glyphs.md_alert, message=f'Please install via pip: {", ".join(missing)}')
-    sys.exit(1)
-
-class Package(NamedTuple):
-    BrewType: Optional[str] = None
-    CurrentVersion: Optional[str] = None
-    InstalledVersions: List[str] = None
-    PreviousVersion: Optional[str] = None
-    Name: Optional[str] = None
+import click
 
 class SystemUpdates(NamedTuple):
     success  : Optional[bool] = False
     error    : Optional[str]  = None
     count    : Optional[int]  = 0
-    packages : Optional[List[Package]] = None
+    packages : Optional[List[str]] = None
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 VALID_TYPES = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
@@ -87,25 +71,32 @@ def find_apt_updates(package_type: str = None):
     if rc != 0:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
 
-    command = f'sudo apt list --upgradable'
+    # command = 'sudo apt list --upgradable'
+    command = 'sudo apt upgrade --simulate --quiet'
     rc, stdout, stderr = util.run_piped_command(command)
-    packages = []
     if rc == 0:
-        lines = stdout.split('\n')
-        pattern = re.compile(
-            r'^([^/]+)/\S+\s+(\S+)\s+\S+\s+\[upgradable from:\s+(\S+)\]'
-        )
-        for line in lines[1:]:
+        packages = []
+        # We don't want to count deferred packages as they can't be installed
+        try:
+            _, after = stdout.split('The following packages will be upgraded:', 1)
+            lines = after.lstrip().strip().split('\n')
+        except:
+            logging.info(f'[find_apt_updates] regex not found, please run "{command}" manually to verify')
+            lines = []
+
+        for line in lines:
+            pattern = re.compile(
+                r'(\d+)\s+upgraded,\s+(\d+)\s+newly installed,\s+(\d+)\s+to remove and\s+(\d+)\s+not upgraded\.'
+            )
             match = pattern.search(line)
             if match:
-                package_name, new_version, old_version = match.groups()
-                packages.append(
-                    Package(
-                        CurrentVersion=new_version,
-                        PreviousVersion=old_version,
-                        Name=package_name
-                    )
-                )
+                break
+            else:
+                for name in re.split(r'\s+', line):
+                    if len(name) > 0:
+                        packages.append(name)
+    else:
+        return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
 
     logging.info(f'[find_apt_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
@@ -140,23 +131,10 @@ def find_brew_updates(package_type: str = None):
 
     packages = []
     for obj in brew_data['formulae']:
-        packages.append(
-            Package(
-                BrewType='formulae',
-                CurrentVersion=obj['current_version'],
-                InstalledVersions=obj['installed_versions'],
-                Name=obj['name'],
-            )
-        )
+        packages.append(obj['name'])
+
     for obj in brew_data['casks']:
-        packages.append(
-            Package(
-                BrewType='cask',
-                CurrentVersion=obj['current_version'],
-                InstalledVersions=obj['installed_versions'],
-                Name=obj['name'],
-            )
-        )
+        packages.append(obj['name'])
 
     logging.info(f'[find_brew_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
@@ -176,32 +154,28 @@ def find_dnf_updates(package_type: str=None):
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
         packages = []
-        _, after = stdout.split('Repositories loaded.', 1)
-        lines = after.lstrip().strip().split('\n')
+        try:
+            _, after = stdout.split('Repositories loaded.', 1)
+            lines = after.lstrip().strip().split('\n')
+        except:
+            logging.info(f'[find_dnf_updates] regex not found, please run "{command}" manually to verify')
+            lines = []
+
         for line in lines:
             bits = re.split(r'\s+', line)
-            packages.append(
-                Package(
-                    CurrentVersion=bits[1],
-                    Name=bits[0]
-                )
-            )
+            packages.append(bits[0])
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
 
     # This is here to test locally as I don't have dnf
     # with open(os.path.join(util.get_script_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
     #     stdout = f.read()
+    #     packages = []
     #     _, after = stdout.split('Repositories loaded.', 1)
     #     lines = after.lstrip().strip().split('\n')
     #     for line in lines:
     #         bits = re.split(r'\s+', line)
-    #         data['packages'].append(
-    #             Package(
-    #                 CurrentVersion=bits[1],
-    #                 Name=bits[0]
-    #             )
-    #         )
+    #         packages.append(bits[0])
 
     logging.info(f'[find_dnf_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
@@ -230,15 +204,10 @@ def find_flatpak_updates(package_type: str=None):
             lines = stdout.split('\n')
             for line in lines:
                 bits = re.split(r'\s+', line)
-                packages.append(
-                    Package(
-                        CurrentVersion=bits[1],
-                        Name=bits[0],
-                    )
-                )
+                packages.append(bits[0])
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
- 
+
     logging.info(f'[find_flatpak_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
 
@@ -256,12 +225,7 @@ def find_mint_updates(package_type: str=None):
         lines = stdout.split('\n')
         for line in lines:
             bits = re.split(r'\s+', line)
-            packages.append(
-                Package(
-                    CurrentVersion=bits[2],
-                    Name=bits[1]
-                )
-            )
+            packages.append(bits[1])
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
 
@@ -278,34 +242,28 @@ def find_pacman_updates(package_type: str=None):
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
         packages = []
-        _, after = stdout.split(':: Checking for updates...', 1)
-        lines = after.lstrip().strip().split('\n')
+        try:
+            _, after = stdout.split(':: Checking for updates...', 1)
+            lines = after.lstrip().strip().split('\n')
+        except:
+            logging.info(f'[find_pacman_updates] regex not found, please run "{command}" manually to verify')
+            lines = []
+
         for line in lines:
             bits = re.split(r'\s+', line)
-            packages.append(
-                Package(
-                    CurrentVersion=bits[1],
-                    Name=bits[0],
-                    PreviousVersion=bits[3],
-                )
-            )
+            packages.append(bits[0])
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
 
     # This is here to test locally as I don't have pacman
     # with open(os.path.join(util.get_script_directory(), 'pacman-output.txt'), 'r', encoding='utf-8') as f:
     #     stdout = f.read()
+    #     packages = []
     #     _, after = stdout.split(':: Checking for updates...', 1)
     #     lines = after.lstrip().strip().split('\n')
     #     for line in lines:
     #         bits = re.split(r'\s+', line)
-    #         data['packages'].append(
-    #             Package(
-    #                 CurrentVersion=bits[3],
-    #                 Name=bits[0],
-    #                 PreviousVersion=bits[1],
-    #             )
-    #         )
+    #         packages.append(bits[0])
 
     logging.info(f'[find_pacman_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
@@ -323,27 +281,18 @@ def find_snap_updates(package_type: str=None):
         lines = stdout.lstrip().strip().split('\n')
         for line in lines[1:]:
             bits = re.split(r'\s+', line)
-            packages.append(
-                Package(
-                    CurrentVersion=bits[1],
-                    Name=bits[0]
-                )
-            )
+            packages.append(bits[0])
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
 
     # This is here to test locally as I don't have yum
     # with open(os.path.join(util.get_script_directory(), 'snap-output.txt'), 'r', encoding='utf-8') as f:
     #     stdout = f.read()
+    #     packages = []
     #     lines = stdout.lstrip().strip().split('\n')
     #     for line in lines[1:]:
     #         bits = re.split(r'\s+', line)
-    #         data['packages'].append(
-    #             Package(
-    #                 CurrentVersion=bits[1],
-    #                 Name=bits[0]
-    #             )
-    #         )
+    #         packages.append(bits[0])
 
     logging.info(f'[find_snap_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
@@ -358,8 +307,12 @@ def find_yay_updates(package_type: str=None, aur: bool=False):
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
         packages = []
-        _, after = stdout.split(':: Checking for updates...', 1)
-        lines = after.lstrip().strip().split('\n')
+        try:
+            _, after = stdout.split(':: Checking for updates...', 1)
+            lines = after.lstrip().strip().split('\n')
+        except:
+            logging.info(f'[find_pacman_updates] regex not found, please run "{command}" manually to verify')
+            lines = []
 
         if aur:
             lines = [line for line in lines if line.endswith('(AUR)')]
@@ -368,19 +321,14 @@ def find_yay_updates(package_type: str=None, aur: bool=False):
 
         for line in lines:
             bits = re.split(r'\s+', line)
-            packages.append(
-                Package(
-                    CurrentVersion=bits[3],
-                    Name=bits[0],
-                    PreviousVersion=bits[1],
-                )
-            )
+            packages.append(bits[0])
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
 
     # This is here to test locally as I don't have yay
     # with open(os.path.join(util.get_script_directory(), 'yay-output.txt'), 'r', encoding='utf-8') as f:
     #     stdout = f.read()
+    #     packages = []
     #     _, after = stdout.split(':: Checking for updates...', 1)
     #     lines = after.lstrip().strip().split('\n')
 
@@ -391,13 +339,7 @@ def find_yay_updates(package_type: str=None, aur: bool=False):
 
     #     for line in lines:
     #         bits = re.split(r'\s+', line)
-    #         data['packages'].append(
-    #             Package(
-    #                 CurrentVersion=bits[3],
-    #                 Name=bits[0],
-    #                 PreviousVersion=bits[1],
-    #             )
-    #         )
+    #         packages.append(bits[0])
 
     logging.info(f'[find_yay_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
@@ -417,32 +359,28 @@ def find_yum_updates(package_type: str=None):
     rc, stdout, stderr = util.run_piped_command(command)
     if rc == 0:
         packages = []
-        _, after = stdout.split('Repositories loaded.', 1)
-        lines = after.lstrip().strip().split('\n')
+        try:
+            _, after = stdout.split('Repositories loaded.', 1)
+            lines = after.lstrip().strip().split('\n')
+        except:
+            logging.info(f'[find_yum_updates] regex not found, please run "{command}" manually to verify')
+            lines = []
+
         for line in lines:
             bits = re.split(r'\s+', line)
-            packages.append(
-                Package(
-                    CurrentVersion=bits[1],
-                    Name=bits[0]
-                )
-            )
+            packages.append(bits[0])
     else:
         return SystemUpdates(success=False, error=f'Failed to execute "{command}"')
 
     # This is here to test locally as I don't have yum
     # with open(os.path.join(util.get_script_directory(), 'yum-output.txt'), 'r', encoding='utf-8') as f:
     #     stdout = f.read()
+    #     packages = []
     #     _, after = stdout.split('Repositories loaded.', 1)
     #     lines = after.lstrip().strip().split('\n')
     #     for line in lines:
     #         bits = re.split(r'\s+', line)
-    #         data['packages'].append(
-    #             Package(
-    #                 CurrentVersion=bits[1],
-    #                 Name=bits[0]
-    #             )
-    #         )
+    #         packages.append(bits[0])
 
     logging.info(f'[find_yum_updates] returning data, package_type={package_type}')
     return SystemUpdates(success=True, count=len(packages), packages=packages)
@@ -510,10 +448,7 @@ def run(type, background, interval):
     """
     Run update check once or as a daemon
     """
-    if not util.network_is_reachable():
-        print(f'{util.color_title(glyphs.md_network_off_outline)} {util.color_error("the network is unreachable")}')
-        sys.exit(1)
-
+    util.network_is_reachable()
     tempfile = get_tempfile_name(package_type=type)
     write_tempfile(tempfile, LOADING)
     logging.info(f'[run] Starting - package_type={type}, background={background}, interval={interval}')
