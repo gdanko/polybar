@@ -516,13 +516,14 @@ def worker(package_type, background, interval):
                     subprocess.run(['polybar-msg', 'action', f'#system-updates-{package_type}.send.{LOADING}'])
                     find_updates(package_type=package_type)
                     time.sleep(interval)
+            else:
+                logging.info(f'[worker] foreground worker - package_type={package_type}')
+                find_updates(package_type=package_type)
         finally:
             if lockfile.exists():
                 lockfile.unlink()
                 logging.info(f'[worker] lockfile removed for {package_type}')
-    else:
-        logging.info(f'[worker] foreground worker - package_type={package_type}')
-        find_updates(package_type=package_type)
+
 
 if __name__ == '__main__':
     cli()
