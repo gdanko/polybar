@@ -290,4 +290,3 @@ def validate_requirements(required: list=[]):
             icon    = icon,
             message = f'Please install via pip: {", ".join(missing)}',
         )
-

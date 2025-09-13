@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 from polybar import glyphs, state, util
 from typing import Any, Dict, List, Optional, NamedTuple
 import argparse
@@ -7,6 +8,8 @@ import os
 import re
 import sys
 import time
+
+_disk_identifier: str | None = None
 
 class FilesystemInfo(NamedTuple):
     success    : Optional[bool]  = False
@@ -20,43 +23,36 @@ class FilesystemInfo(NamedTuple):
     used       : Optional[int]   = 0
     free       : Optional[int]   = 0
 
-def get_disk_uuid(mountpoint: str='') -> str:
-    # Make this foolproof
-    rc, stdout, stderr = util.run_piped_command(f'findmnt {mountpoint}')
-    # TARGET    SOURCE                      FSTYPE    OPTIONS
-    # /         /dev/mapper/vgmint-root     ext4      rw,relatime,errors=remount-ro
-    if rc == 0:
-        lines = stdout.split('\n')
-        fs = re.split(r'\s+', lines[1])[1]
-        if fs != '':
-            rc, stdout, stderr = util.run_piped_command(f'blkid {fs}')
-            # /dev/mapper/vgmint-root: UUID="6dc8d2cd-8977-4fa3-8357-23ced5f9dd4b" BLOCK_SIZE="4096" TYPE="ext4"
-            if rc == 0:
-                match = re.search(r'UUID="([^"]+)"', stdout)
-                if match:
-                    return match.group(1)
-            else:
-                return ''
-        else:
-            return ''
+def get_uuid(mountpoint: str='') -> str:
+    rc, device, _ = util.run_piped_command(f'findmnt -n -o SOURCE {mountpoint}')
+    if rc == 0 and device != '':
+        rc, uuid, _ = util.run_piped_command(f'blkid -s UUID -o value "{device}"')
+        if rc == 0 and uuid != '':
+            return uuid
     else:
-        print(f'{util.color_title(glyphs.md_harddisk)} {util.color_error(f"{mountpoint} is an invalid mountpoint")}')
-        sys.exit(1)
+        util.error_exit(icon=glyphs.md_alert, message=f'{mountpoint} is an invalid mountpoint')
+    
+    return None
 
-def get_statefile_name(mountpoint: str='') -> str:
-    uuid = get_disk_uuid(mountpoint=mountpoint)
+def set_disk_identifier(mountpoint: str=None):
+    """
+    Set the disk UUID
+    """
+    global _disk_identifier
+    uuid = get_uuid(mountpoint=mountpoint)
 
-    if uuid != '':
-        statefile = os.path.basename(__file__)
-        statefile_no_ext = os.path.splitext(statefile)[0]
-        filename = os.path.join(util.get_home_directory(), f'.polybar-{statefile_no_ext}-{uuid}-state')
-        return filename
+    if uuid:
+        _disk_identifier = uuid
     else:
-        mountpoint = mountpoint.replace('/', '_slash') if mountpoint.endswith('/') else mountpoint.replace('/', '_slash_')
-        statefile = os.path.basename(__file__)
-        statefile_no_ext = os.path.splitext(statefile)[0]
-        filename = os.path.join(util.get_home_directory(), f'.polybar-{statefile_no_ext}{mountpoint}-state')
-        return filename
+        _disk_identifier = mountpoint.replace('/', '_slash') if mountpoint.endswith('/') else mountpoint.replace('/', '_slash_')
+    
+def get_statefile() -> str:
+    global _disk_identifier
+
+    statefile = os.path.basename(__file__)
+    statefile_no_ext = os.path.splitext(statefile)[0]
+
+    return Path.home() / f'.polybar-{statefile_no_ext}-{_disk_identifier}-state'
 
 def get_disk_usage(mountpoint: str) -> list:
     """
@@ -119,13 +115,6 @@ def get_disk_usage(mountpoint: str) -> list:
     return filesystem_info
 
 def main():
-    missing = util.missing_binaries(['blkid', 'df', 'findmnt', 'sed'])
-    if len(missing) > 0:
-        error = f'please install: {", ".join(missing)}'
-        output = f'{util.color_title(glyphs.md_harddisk)} {util.color_error(error)}'
-        print(output)
-        sys.exit(1)
-
     mode_count = 3
     parser = argparse.ArgumentParser(description='Get disk info from df(1)')
     parser.add_argument('-m', '--mountpoint', help='The mountpoint to check', required=False)
@@ -135,6 +124,8 @@ def main():
     parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
     parser.add_argument('-b', '--background', action='store_true', help='Run this script in the background', required=False)
     args = parser.parse_args()
+
+    set_disk_identifier(mountpoint=args.mountpoint)
 
     # Daemon mode: periodic updates
     if args.background:
@@ -147,8 +138,11 @@ def main():
             time.sleep(args.interval)
         sys.exit(0)
     else:
-        statefile_name = get_statefile_name(mountpoint=args.mountpoint)
-        mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
+        if args.toggle:
+            mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
+        else:
+            mode = state.read_state(statefile=get_statefile())
+
         disk_info = get_disk_usage(args.mountpoint)
 
         if disk_info.success:

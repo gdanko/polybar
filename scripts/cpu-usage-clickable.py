@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 from polybar import glyphs, state, util
 from typing import Any, Dict, List, Optional, NamedTuple
 import argparse
@@ -30,6 +31,11 @@ class CpuInfo(NamedTuple):
     load5     : Optional[float] = 0.0
     load15    : Optional[float] = 0.0
 
+def get_statefile() -> str:
+    statefile = os.path.basename(__file__)
+    statefile_no_ext = os.path.splitext(statefile)[0]
+    return Path.home() / f'.polybar-{statefile_no_ext}-state'
+
 def get_icon():
     if platform.machine() == 'x86':
         return glyphs.md_cpu_32_bit
@@ -37,14 +43,6 @@ def get_icon():
         return glyphs.md_cpu_64_bit
     else:
         return glyphs.oct_cpu
-
-def get_statefile_name() -> str:
-    statefile = os.path.basename(__file__)
-    statefile_no_ext = os.path.splitext(statefile)[0]
-    return os.path.join(
-        util.get_home_directory(),
-        f'.polybar-{statefile_no_ext}-state'
-    )
 
 def get_cpu_type():
     command = 'grep -m 1 "model name" /proc/cpuinfo'
@@ -167,8 +165,11 @@ def main():
             time.sleep(args.interval)
         sys.exit(0)
     else:
-        statefile_name = get_statefile_name()
-        mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
+        if args.toggle:
+            mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
+        else:
+            mode = state.read_state(statefile=get_statefile())
+
         cpu_info = get_cpu_info()
 
         if cpu_info.success:
