@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 from polybar import glyphs, state, util
 from typing import Any, Dict, List, Optional, NamedTuple
 import argparse
@@ -44,13 +45,10 @@ class MemoryInfo(NamedTuple):
     pct_free    : Optional[int]  = 0
     memory_type : Optional[List[MemoryType]] = None
 
-def get_statefile_name() -> str:
+def get_statefile() -> str:
     statefile = os.path.basename(__file__)
     statefile_no_ext = os.path.splitext(statefile)[0]
-    return os.path.join(
-        util.get_home_directory(),
-        f'.polybar-{statefile_no_ext}-state'
-    )
+    return Path.home() / f'.polybar-{statefile_no_ext}-state'
 
 def get_memory_type():
     command = 'sudo dmidecode -t memory'
@@ -228,8 +226,11 @@ def main():
             time.sleep(args.interval)
         sys.exit(0)
     else:
-        statefile_name = get_statefile_name()
-        mode = state.next_state(statefile_name=statefile_name, mode_count=mode_count) if args.toggle else state.read_state(statefile_name=statefile_name)
+        if args.toggle:
+            mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
+        else:
+            mode = state.read_state(statefile=get_statefile())
+
         memory_info = get_memory_usage()
 
         if memory_info.success:
