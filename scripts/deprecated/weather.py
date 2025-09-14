@@ -1,23 +1,12 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
-from polybar import glyphs, state, util
+from polybar import glyphs, util
 from urllib.parse import quote, urlunparse
 from typing import Any, Dict, List, Optional, NamedTuple
 from urllib.request import urlopen, Request
-import json
-import logging
-import os
-import subprocess
+import argparse
 import sys
 import urllib.request
-
-util.validate_requirements(required=['click'])
-
-import click
-
-_label: str |None=None
-_location: str | None=None
 
 class WeatherData(NamedTuple):
     success           : Optional[bool]  = False
@@ -35,16 +24,12 @@ class WeatherData(NamedTuple):
     location_full     : Optional[str]   = None
     location_short    : Optional[str]   = None
     moonrise          : Optional[str]   = None
-    moonrise_unix     : Optional[int]   = 0
     moonset           : Optional[str]   = None
-    moonset_unix      : Optional[int]   = 0
     moon_illumination : Optional[int]   = 0
     precipitation     : Optional[str]   = None
     region            : Optional[str]   = None
     sunrise           : Optional[str]   = None
-    sunrise_unix      : Optional[int]   = 0
     sunset            : Optional[str]   = None
-    sunset_unix       : Optional[int]   = 0
     todays_high       : Optional[str]   = None
     todays_low        : Optional[str]   = None
     visibility        : Optional[str]   = None
@@ -52,41 +37,6 @@ class WeatherData(NamedTuple):
     wind_degree       : Optional[int]   = 0
     wind_dir          : Optional[str]   = None
     wind_speed        : Optional[str]   = None
-
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOADING = f'{util.color_title(glyphs.md_weather_sunny)} Fetching weather...'
-LOGFILE = Path.home() / '.polybar-weather-test-result.log'
-
-logging.basicConfig(
-    filename=LOGFILE,
-    filemode='a',  # 'a' = append, 'w' = overwrite
-    format='%(asctime)s [%(levelname)-5s] - %(message)s',
-    level=logging.INFO
-)
-
-def set_globals(label: str=None, location: str=None):
-    global _label
-    global _location
-    _label = label
-    _location = location
-
-def get_statefile():
-    global _label
-    global _location
-
-    module = os.path.basename(__file__)
-    module_no_ext = os.path.splitext(module)[0]
-
-    return Path.home() / f'.polybar-{module_no_ext}-{_label}-state'    
-
-def get_tempfile():
-    global _label
-    global _location
-
-    module = os.path.basename(__file__)
-    module_no_ext = os.path.splitext(module)[0]
-
-    return Path.home() / f'.polybar-{module_no_ext}-{_label}-result.txt'
 
 def get_weather_icon(condition_code, is_day):
     # https://www.weatherapi.com/docs/weather_conditions.json
@@ -176,8 +126,11 @@ def get_weather_icon(condition_code, is_day):
 
     return glyphs.md_weather_sunny
 
-def get_weather_data(api_key, location, use_celsius, label, mode):
-    weather_data = None
+def get_weather_data(api_key, location, use_celsius):
+    output = {
+        'success': True,
+        'error'  : None,
+    }
 
     url_parts = (
         'https',
@@ -234,14 +187,10 @@ def get_weather_data(api_key, location, use_celsius, label, mode):
                         humidity       = f'{current_data.get("humidity")}%' if current_data.get('humidity') is not None else 'Unknown',
                         location_full  = location,
                         location_short = location_data.get('name') if location_data.get('name') is not None else 'Unknown',
-                        moonrise       = astro_data.get('moonrise') if astro_data.get('moonrise') is not None else 'No moonrise',
-                        moonrise_unix  = util.to_unix_time(astro_data.get('moonrise')),
-                        moonset        = astro_data.get('moonset') if astro_data.get('moonset') is not None else 'No moonset',
-                        moonset_unix   = util.to_unix_time(astro_data.get('moonset')),
-                        sunrise        = astro_data.get('sunrise') if astro_data.get('sunrise') is not None else 'No sunrise',
-                        sunrise_unix   = util.to_unix_time(astro_data.get('sunrise')),
-                        sunset         = astro_data.get('sunset') if astro_data.get('sunset') is not None else 'No sunset',
-                        sunset_unix    = util.to_unix_time(astro_data.get('sunset')),
+                        moonrise       = astro_data.get('moonrise') if astro_data.get('moonrise') is not None else 'Unknown',
+                        moonset        = astro_data.get('moonset') if astro_data.get('moonset') is not None else 'Unknown',
+                        sunrise        = astro_data.get('sunrise') if astro_data.get('sunrise') is not None else 'Unknown',
+                        sunset         = astro_data.get('sunset') if astro_data.get('sunset') is not None else 'Unknown',
                         precipitation  = f'{forecast_data.get(f"totalprecip_{height}")} {height}' if forecast_data.get(f'totalprecip_{height}') is not None else 'Unknown',
                         region         = location_data.get('region') if location_data.get('region') is not None else 'Unknown',
                         todays_high    = f'{forecast_data.get(f"maxtemp_{unit_lower}")}°{unit}' if forecast_data.get(f'maxtemp_{unit_lower}') is not None else 'Unknown',
@@ -265,75 +214,33 @@ def get_weather_data(api_key, location, use_celsius, label, mode):
                 location_full  = location,
             )
 
-    tempfile = get_tempfile()
+    return weather_data
+
+# @cli.command(help='Check available system updates from different sources')
+# @click.option('-t', '--type', required=True, help=f'The type of update to query; valid choices are: {", ".join(VALID_TYPES)}')
+# @click.option('-b', '--background', is_flag=True, default=False, help='Run in the background')
+# @click.option('-i', '--interval', type=int, default=300, show_default=True, help='The update interval (in seconds)')
+def main():
+    parser = argparse.ArgumentParser(description='Get weather info from World Weather API')
+    parser.add_argument('-a', '--api-key', help='World Weather API key', required=True)
+    parser.add_argument('-l', '--location', help='The location to query', required=True)
+    parser.add_argument('-c', '--use-celsius', action='store_true', help='Use Celsius instead of Fahrenheit', required=False, default=False)
+    args = parser.parse_args()
+
+    util.check_network()
+
+    weather_data = get_weather_data(args.api_key, args.location, args.use_celsius)
+
     if weather_data.success:
         current_temp = weather_data.current_temp
-        low_temp     = weather_data.todays_low
-        high_temp    = weather_data.todays_high
-        icon         = weather_data.icon
-        location     = weather_data.location_short
-        sunrise      = util.to_24hour_time(input=weather_data.sunrise_unix) if weather_data.sunrise_unix > 0 else weather_data.sunrise
-        sunset       = util.to_24hour_time(input=weather_data.sunset_unix) if weather_data.sunset_unix > 0 else weather_data.sunset
-        moonrise     = util.to_24hour_time(input=weather_data.moonrise_unix) if weather_data.moonrise_unix > 0 else weather_data.moonrise
-        moonset      = util.to_24hour_time(input=weather_data.moonset_unix) if weather_data.moonset_unix > 0 else weather_data.moonset
-        wind_degree  = weather_data.wind_degree
-        wind_speed   = weather_data.wind_speed
-
-        if mode == 0:
-            tempfile.write_text(f'{util.color_title(icon)} {location} {current_temp}')
-        elif mode == 1:
-            tempfile.write_text(f'{util.color_title(icon)} {location} {high_temp}{glyphs.cod_arrow_small_up} {low_temp}{glyphs.cod_arrow_small_down}')
-        elif mode == 2:
-            tempfile.write_text(f'{util.color_title(glyphs.fa_wind)} {location} {wind_speed} @ {wind_degree}°')
-        elif mode == 3:
-            tempfile.write_text(f'{util.color_title(glyphs.md_weather_sunny)} {location}  {glyphs.weather_sunrise}  {sunrise} {glyphs.weather_sunset}  {sunset}')
-        elif mode == 4:
-            tempfile.write_text(f'{util.color_title(glyphs.md_weather_sunny)} {location} {glyphs.weather_moonrise} {moonrise} {glyphs.weather_moonset} {moonset}')
+        low_temp = weather_data.todays_low
+        high_temp = weather_data.todays_high
+        icon = weather_data.icon
+        print(f'{util.color_title(icon)} {weather_data.location_short} {current_temp} ({high_temp}{glyphs.cod_arrow_small_up} {low_temp}{glyphs.cod_arrow_small_down})')
+        sys.exit(0)
     else:
-        tempfile.write_text(f'{util.color_title(glyphs.md_alert)} {util.color_error(weather_data.error)}')
-
-@click.group(context_settings=CONTEXT_SETTINGS)
-def cli():
-    """
-    Weather fetcher
-    """
-    pass
-
-@cli.command(context_settings=CONTEXT_SETTINGS)
-@click.option('-l', '--location', required=True, default='Los Angeles, CA, US', help='The location to query')
-@click.option('--label', required=True, help='A "friendly name" to be used to form the IPC calls')
-def show(location, label):
-    """
-    Display the weather information
-    """
-    logging.info('[show] entering function')
-    set_globals(label=label, location=location)
-    tempfile = get_tempfile()
-
-    if tempfile.exists():
-        print(tempfile.read_text().strip())
-    else:
-        print(LOADING)
-
-@cli.command(help='Get weather info from World Weather API', context_settings=CONTEXT_SETTINGS)
-@click.option('-a', '--api-key', required=True, help=f'World Weather API key')
-@click.option('-l', '--location', required=True, default='Los Angeles, CA, US', help='The location to query')
-@click.option('-c', '--use-celsius', default=False, is_flag=True, help='Use Celsius instead of Fahrenheit')
-@click.option('--label', required=True, help='A "friendly name" to be used to form the IPC calls')
-@click.option('-t', '--toggle', is_flag=True, help='Toggle the output format', required=False)
-def run(api_key, location, use_celsius, label, toggle):
-    mode_count = 5
-    util.check_network()
-    set_globals(label=label, location=location)
-
-    if toggle:
-        mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
-    else:
-        mode = state.read_state(statefile=get_statefile())
-
-    subprocess.run(['polybar-msg', 'action', f'#weather-{label}.send.{LOADING}'])
-    get_weather_data(api_key, location, use_celsius, label, mode)
-    subprocess.run(['polybar-msg', 'action', f'#weather-{label}.hook.0'])
+        print(f'{util.color_title(glyphs.md_alert)} {util.color_error(weather_data.error)}')
+        sys.exit(1)
 
 if __name__ == '__main__':
-    cli()
+    main()
