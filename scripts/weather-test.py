@@ -35,12 +35,16 @@ class WeatherData(NamedTuple):
     location_full     : Optional[str]   = None
     location_short    : Optional[str]   = None
     moonrise          : Optional[str]   = None
+    moonrise_unix     : Optional[int]   = 0
     moonset           : Optional[str]   = None
+    moonset_unix      : Optional[int]   = 0
     moon_illumination : Optional[int]   = 0
     precipitation     : Optional[str]   = None
     region            : Optional[str]   = None
     sunrise           : Optional[str]   = None
+    sunrise_unix      : Optional[int]   = 0
     sunset            : Optional[str]   = None
+    sunset_unix       : Optional[int]   = 0
     todays_high       : Optional[str]   = None
     todays_low        : Optional[str]   = None
     visibility        : Optional[str]   = None
@@ -230,10 +234,14 @@ def get_weather_data(api_key, location, use_celsius, label, mode):
                         humidity       = f'{current_data.get("humidity")}%' if current_data.get('humidity') is not None else 'Unknown',
                         location_full  = location,
                         location_short = location_data.get('name') if location_data.get('name') is not None else 'Unknown',
-                        moonrise       = astro_data.get('moonrise') if astro_data.get('moonrise') is not None else 'Unknown',
-                        moonset        = astro_data.get('moonset') if astro_data.get('moonset') is not None else 'Unknown',
-                        sunrise        = astro_data.get('sunrise') if astro_data.get('sunrise') is not None else 'Unknown',
-                        sunset         = astro_data.get('sunset') if astro_data.get('sunset') is not None else 'Unknown',
+                        moonrise       = astro_data.get('moonrise') if astro_data.get('moonrise') is not None else 'No moonrise',
+                        moonrise_unix  = util.to_unix_time(astro_data.get('moonrise')),
+                        moonset        = astro_data.get('moonset') if astro_data.get('moonset') is not None else 'No moonset',
+                        moonset_unix   = util.to_unix_time(astro_data.get('moonset')),
+                        sunrise        = astro_data.get('sunrise') if astro_data.get('sunrise') is not None else 'No sunrise',
+                        sunrise_unix   = util.to_unix_time(astro_data.get('sunrise')),
+                        sunset         = astro_data.get('sunset') if astro_data.get('sunset') is not None else 'No sunset',
+                        sunset_unix    = util.to_unix_time(astro_data.get('sunset')),
                         precipitation  = f'{forecast_data.get(f"totalprecip_{height}")} {height}' if forecast_data.get(f'totalprecip_{height}') is not None else 'Unknown',
                         region         = location_data.get('region') if location_data.get('region') is not None else 'Unknown',
                         todays_high    = f'{forecast_data.get(f"maxtemp_{unit_lower}")}°{unit}' if forecast_data.get(f'maxtemp_{unit_lower}') is not None else 'Unknown',
@@ -264,10 +272,12 @@ def get_weather_data(api_key, location, use_celsius, label, mode):
         high_temp    = weather_data.todays_high
         icon         = weather_data.icon
         location     = weather_data.location_short
-        sunrise      = weather_data.sunrise
-        sunset       = weather_data.sunset
+        sunrise      = util.to_24hour_time(input=weather_data.sunrise_unix) if weather_data.sunrise_unix > 0 else weather_data.sunrise
+        sunset       = util.to_24hour_time(input=weather_data.sunset_unix) if weather_data.sunset_unix > 0 else weather_data.sunset
+        moonrise     = util.to_24hour_time(input=weather_data.moonrise_unix) if weather_data.moonrise_unix > 0 else weather_data.moonrise
+        moonset      = util.to_24hour_time(input=weather_data.moonset_unix) if weather_data.moonset_unix > 0 else weather_data.moonset
         wind_degree  = weather_data.wind_degree
-        wind_speed   = weather_data.wind_speed      
+        wind_speed   = weather_data.wind_speed
 
         if mode == 0:
             tempfile.write_text(f'{util.color_title(icon)} {location} {current_temp}')
@@ -277,6 +287,8 @@ def get_weather_data(api_key, location, use_celsius, label, mode):
             tempfile.write_text(f'{util.color_title(glyphs.fa_wind)} {location} {wind_speed} @ {wind_degree}°')
         elif mode == 3:
             tempfile.write_text(f'{util.color_title(glyphs.md_weather_sunny)} {location}  {glyphs.weather_sunrise}  {sunrise} {glyphs.weather_sunset}  {sunset}')
+        elif mode == 4:
+            tempfile.write_text(f'{util.color_title(glyphs.md_weather_sunny)} {location} {glyphs.weather_moonrise} {moonrise} {glyphs.weather_moonset} {moonset}')
     else:
         tempfile.write_text(f'{util.color_title(glyphs.md_alert)} {util.color_error(weather_data.error)}')
 
@@ -308,9 +320,9 @@ def show(location, label):
 @click.option('-l', '--location', required=True, default='Los Angeles, CA, US', help='The location to query')
 @click.option('-c', '--use-celsius', default=False, is_flag=True, help='Use Celsius instead of Fahrenheit')
 @click.option('--label', required=True, help='A "friendly name" to be used to form the IPC calls')
-@click.option('-t', '--toggle', is_flag=True, help='Toggle the output format (not yet implemented)', required=False)
+@click.option('-t', '--toggle', is_flag=True, help='Toggle the output format', required=False)
 def run(api_key, location, use_celsius, label, toggle):
-    mode_count = 4
+    mode_count = 5
     util.check_network()
     set_globals(label=label, location=location)
 
