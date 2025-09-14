@@ -10,6 +10,7 @@ import sys
 import time
 
 _disk_identifier: str | None = None
+_disk_label : str | None = None
 
 class FilesystemInfo(NamedTuple):
     success    : Optional[bool]  = False
@@ -34,17 +35,22 @@ def get_uuid(mountpoint: str='') -> str:
     
     return None
 
+def set_label(label: str=None):
+    """
+    Set the global label variable
+    """
+    global _label
+    _disk_label = label
+
 def set_disk_identifier(mountpoint: str=None):
     """
     Set the disk UUID
     """
     global _disk_identifier
+    global _label
     uuid = get_uuid(mountpoint=mountpoint)
 
-    if uuid:
-        _disk_identifier = uuid
-    else:
-        _disk_identifier = mountpoint.replace('/', '_slash') if mountpoint.endswith('/') else mountpoint.replace('/', '_slash_')
+    _disk_identifier = uuid if uuid else _label
     
 def get_statefile() -> str:
     global _disk_identifier
@@ -125,6 +131,7 @@ def main():
     parser.add_argument('-b', '--background', action='store_true', help='Run this script in the background', required=False)
     args = parser.parse_args()
 
+    set_label(label=args.label)
     set_disk_identifier(mountpoint=args.mountpoint)
 
     # Daemon mode: periodic updates
