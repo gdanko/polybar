@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from pprint import pprint as pp
 from typing import List, Tuple, Optional, Union
@@ -10,6 +11,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import time
 
 modules = ['psutil']
 missing = []
@@ -75,6 +77,10 @@ def run_piped_command(command: str=None, background: bool=False) -> Union[
 
     return processes[-1].returncode, stdout.decode().strip(), stderr.decode().strip()
 
+#==========================================================
+#  Process management
+#==========================================================
+
 def polybar_is_running() -> bool:
     rc, stdout, _ = run_piped_command('pgrep -x polybar')
     return True if rc == 0 and stdout != '' else False
@@ -89,20 +95,34 @@ def process_is_running(name: str=None, full: bool=False):
     else:
         return False, []
 
-def surrogatepass(code):
-    return code.encode('utf-16', 'surrogatepass').decode('utf-16')
+def is_worker_running(lockfile: Path) -> bool:
+    """
+    Determine if a worker for a given module is running
+    """
 
-def pad_float(number: int=0) -> str:
-    """
-    Pad a float to two decimal places.
-    """
-    return '{:.2f}'.format(float(number))
+    if not lockfile.exists():
+        return False
+    try:
+        pid = int(lockfile.read_text())
+        proc = psutil.Process(pid)
+        cmdline = proc.cmdline()
+        # Only consider it running if it's our script with 'worker' arg
+        if __file__ in cmdline[0] and 'worker' in cmdline:
+            return True
+        else:
+            lockfile.unlink()
+            return False
+    except (ValueError, FileNotFoundError, psutil.NoSuchProcess, PermissionError):
+        # Stale lockfile
+        try:
+            lockfile.unlink()
+        except Exception:
+            pass
+        return False
 
-def get_valid_units() -> list:
-    """
-    Return a list of valid storage units
-    """
-    return ['K', 'Ki', 'M', 'Mi', 'G', 'Gi', 'T', 'Ti', 'P', 'Pi', 'E', 'Ei', 'Z', 'Zi', 'auto']
+#==========================================================
+#  Unit conversersion
+#==========================================================
 
 def network_speed(number: int=0, bytes: bool=False, no_suffix: bool=False) -> str:
     """
@@ -147,6 +167,42 @@ def byte_converter(number: int=0, unit: Optional[str] = None, use_int: bool=Fals
         else:
             return f'{number} {suffix}'
 
+#==========================================================
+#  Time conversion
+#==========================================================
+
+def to_unix_time(input: str=None) -> int:
+    pattern = r'^(0[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$'
+    if re.match(pattern, input):
+        try:
+            # Parse as 12-hour format
+            dt = datetime.strptime(input, '%I:%M %p')
+
+            # Replace today's date with the parsed time
+            now = datetime.now()
+            dt = dt.replace(year=now.year, month=now.month, day=now.day)
+
+            # Convert to Unix timestamp (local time)
+            return int(time.mktime(dt.timetuple()))
+        except:
+            return 0
+    else:
+        return 0
+
+def to_24hour_time(input: int=0):
+    try:
+        # Convert to datetime (local time)
+        dt = datetime.fromtimestamp(input)
+
+        # Format as 24-hour time (HH:MM)
+        return dt.strftime("%H:%M")
+    except:
+        return None
+
+#==========================================================
+#  File and directory
+#==========================================================
+
 def file_exists(filename: str='') -> bool:
     return True if (os.path.exists(filename) and os.path.isfile(filename)) else False
 
@@ -168,6 +224,10 @@ def get_script_directory() -> str:
         get_config_directory(),
         'scripts',
     )
+
+#==========================================================
+#  Dependencies and validation
+#==========================================================
 
 def parse_config_file(filename: str='', required_keys: list=[]):
     # Does the file exist?
@@ -192,6 +252,13 @@ def parse_config_file(filename: str='', required_keys: list=[]):
 
     return config, ''
 
+def parse_json_string(input: str=''):
+    try:
+        json_data = json.loads(input)
+        return json_data, None
+    except Exception as err:
+        return None, err, 
+
 def is_binary_installed(binary_name: str) -> bool:
     return shutil.which(binary_name) is not None
 
@@ -201,23 +268,6 @@ def missing_binaries(binaries: list=[]):
         if not is_binary_installed(binary):
             missing.append(binary)
     return missing
-
-def parse_json_string(input: str=''):
-    try:
-        json_data = json.loads(input)
-        return json_data, None
-    except Exception as err:
-        return None, err, 
-
-def color_title(text: str='') -> str:
-    start_color_title = '%{F#F0C674}'
-    end_color_title = '%{F-}'
-    return f'{start_color_title}{text}{end_color_title}'
-
-def color_error(text: str='') -> str:
-    start_color_title = '%{F#707880}'
-    end_color_title = '%{F-}'
-    return f'{start_color_title}{text}{end_color_title}'
 
 def network_is_reachable():
     host = '8.8.8.8'
@@ -229,45 +279,6 @@ def network_is_reachable():
             return True
     except OSError:
         return False
-
-def to_snake_case(s: str) -> str:
-    # Replace anything that's not a letter or number with underscore
-    s = re.sub(r'[^0-9a-zA-Z]+', '_', s)
-    # Add underscore between camelCase or PascalCase boundaries
-    s = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s)
-    # Collapse multiple underscores into one
-    s = re.sub(r'_+', '_', s)
-    # Strip leading/trailing underscores, lowercase
-    return s.strip('_').lower()
-
-def is_worker_running(lockfile: Path) -> bool:
-    """
-    Determine if a worker for a given module is running
-    """
-
-    if not lockfile.exists():
-        return False
-    try:
-        pid = int(lockfile.read_text())
-        proc = psutil.Process(pid)
-        cmdline = proc.cmdline()
-        # Only consider it running if it's our script with 'worker' arg
-        if __file__ in cmdline[0] and 'worker' in cmdline:
-            return True
-        else:
-            lockfile.unlink()
-            return False
-    except (ValueError, FileNotFoundError, psutil.NoSuchProcess, PermissionError):
-        # Stale lockfile
-        try:
-            lockfile.unlink()
-        except Exception:
-            pass
-        return False
-
-def error_exit(icon: str=None, message: str=None):
-    print(f'{color_title(icon)} {color_error(message)}')
-    sys.exit(1)
 
 def check_network():
     if not network_is_reachable():
@@ -290,3 +301,54 @@ def validate_requirements(required: list=[]):
             icon    = icon,
             message = f'Please install via pip: {", ".join(missing)}',
         )
+
+#==========================================================
+#  Output handling
+#==========================================================
+
+def color_title(text: str='') -> str:
+    start_color_title = '%{F#F0C674}'
+    end_color_title = '%{F-}'
+    return f'{start_color_title}{text}{end_color_title}'
+
+def color_error(text: str='') -> str:
+    start_color_title = '%{F#707880}'
+    end_color_title = '%{F-}'
+    return f'{start_color_title}{text}{end_color_title}'
+
+def error_exit(icon: str=None, message: str=None):
+    print(f'{color_title(icon)} {color_error(message)}')
+    sys.exit(1)
+
+#==========================================================
+#  Formatting and conversion
+#==========================================================
+
+def pad_float(number: int=0) -> str:
+    """
+    Pad a float to two decimal places.
+    """
+    return '{:.2f}'.format(float(number))
+
+def to_snake_case(s: str) -> str:
+    # Replace anything that's not a letter or number with underscore
+    s = re.sub(r'[^0-9a-zA-Z]+', '_', s)
+    # Add underscore between camelCase or PascalCase boundaries
+    s = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s)
+    # Collapse multiple underscores into one
+    s = re.sub(r'_+', '_', s)
+    # Strip leading/trailing underscores, lowercase
+    return s.strip('_').lower()
+
+#==========================================================
+#  Other
+#==========================================================
+
+def surrogatepass(code):
+    return code.encode('utf-16', 'surrogatepass').decode('utf-16')
+
+def get_valid_units() -> list:
+    """
+    Return a list of valid storage units
+    """
+    return ['K', 'Ki', 'M', 'Mi', 'G', 'Gi', 'T', 'Ti', 'P', 'Pi', 'E', 'Ei', 'Z', 'Zi', 'auto']
