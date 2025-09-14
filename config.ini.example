@@ -283,23 +283,23 @@ initial = 1
 
 [module/system-updates-apt]
 inherit = system-updates-base
-hook-0 = ~/.config/polybar/scripts/system-updates-test.py show --type apt
-hook-1 = ~/.config/polybar/scripts/system-updates-test.py run --type apt
-click-left = ~/.config/polybar/scripts/system-updates-test.py run --type apt
+hook-0 = ~/.config/polybar/scripts/system-updates.py show --type apt
+hook-1 = ~/.config/polybar/scripts/system-updates.py run --type apt
+click-left = ~/.config/polybar/scripts/system-updates.py run --type apt
 background = true
 background-action = run
-background-script = system-updates-test.py
+background-script = system-updates.py
 background-arg-interval = 1800
 background-arg-type = apt
 
 [module/system-updates-flatpak]
 inherit = system-updates-base
-hook-0 = ~/.config/polybar/scripts/system-updates-test.py show --type flatpak
-hook-1 = ~/.config/polybar/scripts/system-updates-test.py run --type flatpak
-click-left = ~/.config/polybar/scripts/system-updates-test.py run --type flatpak
+hook-0 = ~/.config/polybar/scripts/system-updates.py show --type flatpak
+hook-1 = ~/.config/polybar/scripts/system-updates.py run --type flatpak
+click-left = ~/.config/polybar/scripts/system-updates.py run --type flatpak
 background = true
 background-action = run
-background-script = system-updates-test.py
+background-script = system-updates.py
 background-arg-interval = 1800
 background-arg-type = flatpak
 
