@@ -28,14 +28,14 @@ I use [Xbar](https://xbarapp.com) and [SwiftBar](https://swiftbar.app) on my Mac
 ## Clickability
 My goal was to have a module that would both run on an interval and also be clickable. By default, it seems these two are mutually exclusive. The `custom/script` type allows me to use the `interval` parameter but doesn't allow me use the features of `custom/ipc`, such as sending messages via `polybar-msg`. You can see my frustration. Fortunately I was able to find a workaround in the form of a bit of a hack. Let's look at a single example.
 ```
-[module/memory-usage-clickable]
+[module/memory-usage]
 type = custom/ipc
 label = %output%
 initial = 1
-hook-0 = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto
-click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto --toggle && polybar-msg action memory-usage-clickable hook 0
+hook-0 = ~/.config/polybar/scripts/memory-usage.py --unit auto
+click-left = ~/.config/polybar/scripts/memory-usage.py --unit auto --toggle && polybar-msg action memory-usage hook 0
 background = true
-background-arg-interval = 2
+background-arg-interval = 5
 ```
 When the module is executed, `hook-0` is called, which simply displays the default output. The `click-left` action executes the script with `--toggle`, which updates the output format via state file. It also displays the output in the new format.
 
