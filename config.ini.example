@@ -330,23 +330,6 @@ background-script = system-updates-test.py
 background-arg-interval = 1800
 background-arg-type = flatpak
 
-[module/speedtest-off]
-type = custom/ipc
-label = %output%
-; Run both commands on startup:
-;   hook-0 = show results (last test or "loading")
-;   hook-1 = start a new test in the background
-initial = 1
-hook-0 = ~/.config/polybar/scripts/speedtest.py show
-hook-1 = ~/.config/polybar/scripts/speedtest.py run
-; On click, trigger a new test
-click-left = ~/.config/polybar/scripts/speedtest.py run
-background = true
-background-action = run
-background-arg-interval = 60
-background-arg-download =
-background-arg-upload =
-
 ;==========================================================
 ;  Systray
 ;==========================================================
@@ -362,14 +345,16 @@ tray-spacing = 16pt
 ;==========================================================
 
 [weather-base]
-type = custom/script
-interval = 900
-env-api_key = "<your_weather_api_key>"
-exec = ~/.config/polybar/scripts/weather.py --api-key "$api_key" --location "$location"
+type = custom/ipc
+label = %output%
+initial = 2
 
 [module/weather-san-diego]
 inherit = weather-base
-env-location = "San Diego, CA, US"
+hook-0 = ~/.config/polybar/scripts/weather-test.py show --location "San Diego, CA, US" --label "san-diego"
+hook-1 = ~/.config/polybar/scripts/weather-test.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego"
+click-left = ~/.config/polybar/scripts/weather-test.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego" --toggle
+click-right = ~/.config/polybar/scripts/weather-test.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego"
 
 ;==========================================================
 ;  WLAN

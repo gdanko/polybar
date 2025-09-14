@@ -1,6 +1,7 @@
 from polybar import util
 
 # Weather
+fa_wind                             = util.surrogatepass('\uef16')
 md_weather_cloudy                   = util.surrogatepass('\udb81\udd90')
 md_weather_hazy                     = util.surrogatepass('\udb83\udf30')
 md_weather_night                    = util.surrogatepass('\udb81\udd94')
@@ -41,6 +42,8 @@ weather_night_storm_showers         = util.surrogatepass('\ue337')
 weather_night_thunderstorm          = util.surrogatepass('\ue338')
 weather_sleet                       = util.surrogatepass('\ue3ad')
 weather_snow_wind                   = util.surrogatepass('\ue35e')
+weather_sunrise                     = util.surrogatepass('\ue34c')
+weather_sunset                      = util.surrogatepass('\ue34d')
 
 # WiFi
 md_wifi_strength_1                  = util.surrogatepass('\udb82\udd1f')

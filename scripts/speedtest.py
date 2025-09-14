@@ -104,23 +104,24 @@ def run_speedtest(download=True, upload=True, bytes=False):
     """
     logging.info(f'[in run_speedtest] download={download}, upload={upload}, bytes={bytes}')
 
-    command = [
+    command_bits = [
         'speedtest-cli',
         '--simple',
         '--secure',
     ]
 
     if not download:
-        command.append('--no-download')
+        command_bits.append('--no-download')
 
     if not upload:
-        command.append('--no-upload')
+        command_bits.append('--no-upload')
     
-    logging.info(f'[in run_speedtest] command: "{" ".join(command)}"')
+    command = ' '.join(command_bits)
+    logging.info(f'[in run_speedtest] command: "{command}"')
 
     try:
         output = subprocess.check_output(
-            command,
+            command_bits,
             stderr=subprocess.STDOUT,
             text=True
         )
