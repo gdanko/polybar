@@ -67,7 +67,7 @@ font-2 = "Noto Sans:size=11;1"
 font-3 = "Arimo Nerd Font:size=14;2"
 
 modules-left =
-modules-right = network-throughput-wlo1 wlan-wlo1 speedtest filesystem-usage-clickable-root filesystem-usage-clickable-work memory-usage-clickable cpu-usage-clickable system-updates-apt system-updates-flatpak weather-san-diego
+modules-right = network-throughput-wlo1 wlan-wlo1 speedtest filesystem-usage-root filesystem-usage-work memory-usage cpu-usage system-updates-apt system-updates-flatpak weather-san-diego
 
 cursor-click = pointer
 cursor-scroll = ns-resize
@@ -95,16 +95,11 @@ pseudo-transparency = true
 ;==========================================================
 
 [module/cpu-usage]
-type = custom/script
-interval = 2
-exec = ~/.config/polybar/scripts/cpu-usage.py
-
-[module/cpu-usage-clickable]
 type = custom/ipc
 label = %output%
 initial = 1
-hook-0 = ~/.config/polybar/scripts/cpu-usage-clickable.py
-click-left = ~/.config/polybar/scripts/cpu-usage-clickable.py --toggle && polybar-msg action cpu-usage-clickable hook 0
+hook-0 = ~/.config/polybar/scripts/cpu-usage.py
+click-left = ~/.config/polybar/scripts/cpu-usage.py --toggle && polybar-msg action cpu-usage hook 0
 background = true
 background-arg-interval = 2
 
@@ -113,18 +108,35 @@ background-arg-interval = 2
 ;==========================================================
 
 [filesystem-usage-base]
-type = custom/script
-interval = 2
-env-unit = "auto"
-exec = ~/.config/polybar/scripts/filesystem-usage.py --mountpoint "$mountpoint" --unit "$unit"
+type = custom/ipc
+initial = 1
+label = %output%
 
 [module/filesystem-usage-root]
 inherit = filesystem-usage-base
-env-mountpoint = "/"
+; How to use variables here?
+; env-mountpoint = /
+; env-unit = "auto"
+hook-0 = ~/.config/polybar/scripts/filesystem-usage.py --mountpoint / --unit auto
+click-left = ~/.config/polybar/scripts/filesystem-usage.py --mountpoint / --unit auto --toggle && polybar-msg action filesystem-usage-root hook 0
+background = true
+background-script = filesystem-usage.py
+background-arg-mountpoint = /
+background-arg-label = root
+background-arg-interval = 30
 
 [module/filesystem-usage-work]
 inherit = filesystem-usage-base
-env-mountpoint = "/work"
+; How to use variables here?
+; env-mountpoint = /work
+; env-unit = "auto"
+hook-0 = ~/.config/polybar/scripts/filesystem-usage.py --mountpoint /work --unit auto
+click-left = ~/.config/polybar/scripts/filesystem-usage.py --mountpoint /work --unit auto --toggle && polybar-msg action filesystem-usage-work hook 0
+background = true
+background-script = filesystem-usage.py
+background-arg-mountpoint = /work
+background-arg-label = work
+background-arg-interval = 30
 
 [filesystem-usage-formatted-base]
 type = custom/script
@@ -141,43 +153,18 @@ env-mountpoint = "/"
 inherit = filesystem-usage-formatted-base
 env-mountpoint = "/work"
 
-[filesystem-usage-clickable-base]
-type = custom/ipc
-initial = 1
-label = %output%
-
-[module/filesystem-usage-clickable-root]
-inherit = filesystem-usage-clickable-base
-; How to use variables here?
-; env-mountpoint = /
-; env-unit = "auto"
-hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto
-click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint / --unit auto --toggle && polybar-msg action filesystem-usage-clickable-root hook 0
-background = true
-background-script = filesystem-usage-clickable.py
-background-arg-label = root
-background-arg-interval = 30
-
-[module/filesystem-usage-clickable-work]
-inherit = filesystem-usage-clickable-base
-; How to use variables here?
-; env-mountpoint = /work
-; env-unit = "auto"
-hook-0 = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto
-click-left = ~/.config/polybar/scripts/filesystem-usage-clickable.py --mountpoint /work --unit auto --toggle && polybar-msg action filesystem-usage-clickable-work hook 0
-background = true
-background-script = filesystem-usage-clickable.py
-background-arg-label = work
-background-arg-interval = 30
-
 ;==========================================================
 ;  Memory
 ;==========================================================
 
 [module/memory-usage]
-type = custom/script
-interval = 5
-exec = ~/.config/polybar/scripts/memory-usage.py
+type = custom/ipc
+label = %output%
+initial = 1
+hook-0 = ~/.config/polybar/scripts/memory-usage.py --unit auto
+click-left = ~/.config/polybar/scripts/memory-usage.py --unit auto --toggle && polybar-msg action memory-usage hook 0
+background = true
+background-arg-interval = 5
 
 [module/memory-usage-formatted]
 type = custom/script
@@ -185,15 +172,6 @@ interval = 5
 env-format = "{^used / ^total}"
 env-unit = "auto"
 exec = ~/.config/polybar/scripts/memory-usage-formatted.py --format "$format" --unit "$unit"
-
-[module/memory-usage-clickable]
-type = custom/ipc
-label = %output%
-initial = 1
-hook-0 = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto
-click-left = ~/.config/polybar/scripts/memory-usage-clickable.py --unit auto --toggle && polybar-msg action memory-usage-clickable hook 0
-background = true
-background-arg-interval = 5
 
 ;==========================================================
 ;  Network
@@ -279,9 +257,13 @@ env-symbol = "NOW"
 ;==========================================================
 
 [module/swap-usage]
-type = custom/script
-interval = 2
-exec = ~/.config/polybar/scripts/swap-usage.py
+type = custom/ipc
+label = %output%
+initial = 1
+hook-0 = ~/.config/polybar/scripts/swap-usage.py --unit auto
+click-left = ~/.config/polybar/scripts/swap-usage.py --unit auto --toggle && polybar-msg action swap-usage hook 0
+background = true
+background-arg-interval = 2
 
 [module/swap-usage-formatted]
 type = custom/script
@@ -289,15 +271,6 @@ interval = 2
 env-format = "{^used / ^total}"
 env-unit = "auto"
 exec = ~/.config/polybar/scripts/swap-usage-formatted.py --format "$format" --unit "$unit"
-
-[module/swap-usage-clickable]
-type = custom/ipc
-label = %output%
-initial = 1
-hook-0 = ~/.config/polybar/scripts/swap-usage-clickable.py --unit auto
-click-left = ~/.config/polybar/scripts/swap-usage-clickable.py --unit auto --toggle && polybar-msg action swap-usage-clickable hook 0
-background = true
-background-arg-interval = 2
 
 ;==========================================================
 ;  System Updates
@@ -342,6 +315,8 @@ tray-spacing = 16pt
 
 ;==========================================================
 ;  Weather
+;
+;  https://www.weatherapi.com/signup.aspx
 ;==========================================================
 
 [weather-base]
@@ -351,10 +326,10 @@ initial = 2
 
 [module/weather-san-diego]
 inherit = weather-base
-hook-0 = ~/.config/polybar/scripts/weather-test.py show --location "San Diego, CA, US" --label "san-diego"
-hook-1 = ~/.config/polybar/scripts/weather-test.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego"
-click-left = ~/.config/polybar/scripts/weather-test.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego" --toggle
-click-right = ~/.config/polybar/scripts/weather-test.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego"
+hook-0 = ~/.config/polybar/scripts/weather.py show --location "San Diego, CA, US" --label "san-diego"
+hook-1 = ~/.config/polybar/scripts/weather.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego"
+click-left = ~/.config/polybar/scripts/weather.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego" --toggle
+click-right = ~/.config/polybar/scripts/weather.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego"
 
 ;==========================================================
 ;  WLAN
