@@ -183,7 +183,7 @@ This module retrieves weather from [weatherapi.com](https://www.weatherapi.com) 
 
 #### Output Formats
 1. `San Diego 73.0°F`
-2. `San Diego ↓76.5°F ↓64.6°F`
+2. `San Diego ↑76.5°F ↓64.6°F`
 3. `San Diego <wind icon> 9.6 mph @ 267°`
 4. `San Diego <sunrise icon> 06:32 <sunset icon> 18:55`
 5. `San Diego <moonrise icon> 23:06 <moonset icon> 14:25`
