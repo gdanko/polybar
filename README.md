@@ -9,48 +9,21 @@ I use [Xbar](https://xbarapp.com) and [SwiftBar](https://swiftbar.app) on my Mac
 
 ## The scripts
 * `cpu-usage.py` - This script shows CPU utilization in the format: `user 2.13%, sys 0.92%, idle 96.73%`. It relies on `mpstat` which is part of the `sysstat` package. If `mpstat` isn't available, you'll be asked to install `sysstat`.
-* `filesystem-usage.py` - This script shows disk usage in the format: `<used> GiB / <total> GiB`. This script uses `df -B 1` to gather the data.
-* `filesystem-usage-clickable.py` - This is a version of `filesystem-usage.py` that allows you to click on the item in the bar to cycle through several output formats.
-* `filesystem-usage-formatted.py` - This is a version of `filesystem-usage.py` that has a `--format` flag which allows you to specify a custom output format. Formatting details will be discussed below.
-* `memory-usage.py` - This script shows memory usage in the format: `<used> GiB / <total> GiB`. This script uses `free -b -w` to gather the data.
-* `memory-usage-clickable.py` - This is a version of `memory-usage.py` that allows you to click on the item in the bar to cycle through several output formats.
-* `memory-usage-formatted.py` - This is a version of `memory-usage.py` that has a `--format` flag which allows you to specify a custom output format. Formatting details will be discussed below.
+* `filesystem-usage.py` - Filesystem usage module that allows you to click on the item in the bar to cycle through several output formats.
+* `memory-usage.py` - Memory usage module that allows you to click on the item in the bar to cycle through several output formats.
 * `speedtest.py` - This script connects to [speedtest.net](https://speedtest.net) and displays current upload and download speeds. It's an enhanced version of this awseome [script](https://github.com/haideralipunjabi/polybar-speedtest/tree/main). I added another hack [here](#speedtest-hack) for putting a `Loading...` placeholder while the script fetches the data.
 * `stock-quotes.py` - This script shows basic information about a given stock symbol. It shows the symbol, last price, change amount and percent. It uses [Yahoo! Finance](https://finance.yahoo.com) to gather the data so please use a sane interval as Yahoo! is quick to rate-limit you.
+* `swap-usage.py` - Swap usage module that allows you to click on the item in the bar to cycle through several output formats.
 * `system-updates.py` - This script is able to query a number of different package managers and return the number of available updates. Currently supported are: `apt`, `brew`, `dnf`, `flatpak`, `mintupdate`, `pacman`, `snap`, `yay`, `yay-aur`, and `yum`. Please see the [permissions](#permissions) section before implementing this module.
-* `weather.py` - This script pulls weather data from [Weather API](https://weatherapi.com). You will need to get a free API key from this site to use it. The output shows location name, current temperature, and daily high and low temperatures.
+* `weather.py` - This script pulls weather data from [Weather API](https://weatherapi.com). You will need to get a free API key from this site to use it. This module allows you to left click on its item in the bar to change formats. Right clicking will simply update the current view.
 * `wifi-status.py` - This script uses `iwconfig` to display the current signal strength for the specified interface.
 
 ### Notes
-* The `filesystem-usage*.py` and `memory-usage*.py` scripts have a `--unit` flag that allows you to force the unit the output is displayed in.
+* The `filesystem-usage.py`, `memory-usage.py`, and `swap-usage.py` scripts have a `--unit` flag that allows you to force the unit the output is displayed in.
 * Valid units for the `--unit` flag are `K, Ki, M, Mi, G, Gi, T, Ti, P, Pi, E, Ei, Z, Zi, auto` with the default being `auto`.
 * The `auto` option will intelligently determine which unit to use, depending on the number. For example, if you're using 50.2 GiB on a 4 TiB drive, `auto` would render the output to look like this `50.2 GiB / 4.0 TiB`, where selecting the `Ti` unit would give you `0.05 TiB / 4.0 Tib`. While I enjoy having the flexibility, I think it's a little easier to read the results when using `auto` as a unit.
-* The `*-clickable.py` scripts use a hack to allow both clickability AND running on an interval. Use cases include when I want to click on my CPU usage module to see different output formats. This will be explained in the [Clickability](#clickability) section.
-
-## Formatting disk and memory usage output
-There are currently six tokens that can be used to format the output when using `filesystem-usage-formatted.py` and `memory-usage-formatted.py`:
-* `^total`     - Total available memory/disk
-* `^used`      - Used memory/disk
-* `^free`      - Free memory/disk
-* `^pct_total` - Total percentage of available memory/disk (yes, always 100)
-* `^pct_used`  - Percentage of available memory/disk in use
-* `^pct_free`  - Percentage of available memory/disk free
-
-### Formatting examples
-Glyphs and formatting noise have been removed for readbility's sake. In the last example, all I did was change the display unit.
-```
-% ./scripts/memory-usage-formatted.py --format '{^pct_used used out of a total of ^total}'
-17% used out of a total of 59.75 GiB
-
-% ./scripts/memory-usage-formatted.py --format '{^used / ^total}'
-10.12 GiB / 59.75 GiB
-
-% ./scripts/filesystem-usage-formatted.py --mountpoint "/work" --format '{^used (or ^pct_used) out of ^total}'
-/work 1.21 TiB (or 36%) out of 3.58 TiB
-
-% ./scripts/filesystem-usage-formatted.py --mountpoint "/work" --format '{^used (or ^pct_used) out of ^total}' --unit Gi
-/work 1236.41 GiB (or 36%) out of 3666.49 GiB
-```
+* Some scripts use a hack to allow both clickability AND running on an interval. Use cases include when I want to click on my CPU usage module to see different output formats. This will be explained in the [Clickability](#clickability) section.
+* The `filesystem-usage.py` and `weather.py` modules have a required `--label` flag which allows the script to save its state and output in files that are unique to the instance it's running. The label should be the last portion of the module's defined name, e.g., with `[module/filesystem-usage-root]`, the label should be `root`. This is to allow the `filesystem-usage.py` script to properly invoke `polybar-msg` to manipulate the module.
 
 ## Clickability
 My goal was to have a module that would both run on an interval and also be clickable. By default, it seems these two are mutually exclusive. The `custom/script` type allows me to use the `interval` parameter but doesn't allow me use the features of `custom/ipc`, such as sending messages via `polybar-msg`. You can see my frustration. Fortunately I was able to find a workaround in the form of a bit of a hack. Let's look at a single example.
