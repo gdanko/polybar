@@ -282,7 +282,7 @@ def get_weather_data(api_key, location, use_celsius, label, mode):
         if mode == 0:
             tempfile.write_text(f'{util.color_title(icon)} {location} {current_temp}')
         elif mode == 1:
-            tempfile.write_text(f'{util.color_title(icon)} {location} {high_temp}{glyphs.cod_arrow_small_up} {low_temp}{glyphs.cod_arrow_small_down}')
+            tempfile.write_text(f'{util.color_title(icon)} {location} {glyphs.cod_arrow_small_up}{high_temp} {glyphs.cod_arrow_small_down}{low_temp}')
         elif mode == 2:
             tempfile.write_text(f'{util.color_title(glyphs.fa_wind)} {location} {wind_speed} @ {wind_degree}°')
         elif mode == 3:
