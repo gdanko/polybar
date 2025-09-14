@@ -138,21 +138,6 @@ background-arg-mountpoint = /work
 background-arg-label = work
 background-arg-interval = 30
 
-[filesystem-usage-formatted-base]
-type = custom/script
-interval = 25
-env-format = "{^used / ^total}"
-env-unit = "auto"
-exec = ~/.config/polybar/scripts/filesystem-usage-formatted.py --mountpoint "$mountpoint" --format "$format" --unit "$unit"
-
-[module/filesystem-usage-formatted-root]
-inherit = filesystem-usage-formatted-base
-env-mountpoint = "/"
-
-[module/filesystem-usage-formatted-work]
-inherit = filesystem-usage-formatted-base
-env-mountpoint = "/work"
-
 ;==========================================================
 ;  Memory
 ;==========================================================
@@ -165,13 +150,6 @@ hook-0 = ~/.config/polybar/scripts/memory-usage.py --unit auto
 click-left = ~/.config/polybar/scripts/memory-usage.py --unit auto --toggle && polybar-msg action memory-usage hook 0
 background = true
 background-arg-interval = 5
-
-[module/memory-usage-formatted]
-type = custom/script
-interval = 5
-env-format = "{^used / ^total}"
-env-unit = "auto"
-exec = ~/.config/polybar/scripts/memory-usage-formatted.py --format "$format" --unit "$unit"
 
 ;==========================================================
 ;  Network
@@ -229,11 +207,6 @@ hook-0 = ~/.config/polybar/scripts/speedtest.py show
 hook-1 = ~/.config/polybar/scripts/speedtest.py run
 ; On click, trigger a new test
 click-left = ~/.config/polybar/scripts/speedtest.py run
-background = true
-background-action = run
-background-arg-interval = 60
-background-arg-download =
-background-arg-upload =
 
 ;==========================================================
 ;  Stocks
@@ -264,13 +237,6 @@ hook-0 = ~/.config/polybar/scripts/swap-usage.py --unit auto
 click-left = ~/.config/polybar/scripts/swap-usage.py --unit auto --toggle && polybar-msg action swap-usage hook 0
 background = true
 background-arg-interval = 2
-
-[module/swap-usage-formatted]
-type = custom/script
-interval = 2
-env-format = "{^used / ^total}"
-env-unit = "auto"
-exec = ~/.config/polybar/scripts/swap-usage-formatted.py --format "$format" --unit "$unit"
 
 ;==========================================================
 ;  System Updates
