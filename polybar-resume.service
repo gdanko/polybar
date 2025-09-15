@@ -1,0 +1,19 @@
+# polybar-resume.service
+# Restart polybar cleanly after suspend/hibernate
+#
+# modify this file to your liking
+# link it or copy it to /etc/systemd/system
+# sudo systemctl daemon-reload
+# sudo systemctl enable polybar-resume.service
+
+[Unit]
+Description=Restart Polybar after resume
+After=suspend.target hibernate.target
+Requires=graphical.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/runuser -l gdanko -c '/home/gdanko/.config/polybar/launch.py restart'
+
+[Install]
+WantedBy=suspend.target hibernate.target

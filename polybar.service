@@ -1,0 +1,20 @@
+# polybar.service
+# Keep polybar alive at login and auto-restart on crash
+#
+# mkdir -p ~/.config/systemd/user
+# modify this file to your liking
+# link it or copy it to ~/.config/systemd/user
+# systemctl --user daemon-reload
+# systemctl --user enable --now polybar
+
+[Unit]
+Description=Polybar
+After=graphical.target
+
+[Service]
+ExecStart=/home/gdanko/.config/polybar/launch.py start
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=default.target
