@@ -74,7 +74,8 @@ def run_speedtest(download: bool=True, upload: bool=True, bytes: bool=False):
     download_results = None
     upload_results = None
 
-    s = speedtest.Speedtest()
+    s = speedtest.Speedtest(secure=True)
+
     if download:
         try:
             s.download()
