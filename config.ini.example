@@ -67,7 +67,7 @@ font-2 = "Noto Sans:size=11;1"
 font-3 = "Arimo Nerd Font:size=14;2"
 
 modules-left =
-modules-right = network-throughput-wlo1 wlan-wlo1 speedtest filesystem-usage-root filesystem-usage-work memory-usage cpu-usage system-updates-apt system-updates-flatpak weather-san-diego
+modules-right = network-throughput-wlo1 wlan-wlo1 polybar-speedtest filesystem-usage-root filesystem-usage-work memory-usage cpu-usage system-updates-apt system-updates-flatpak weather-san-diego
 
 cursor-click = pointer
 cursor-scroll = ns-resize
@@ -196,17 +196,22 @@ interval = 2
 ;  Speedtest
 ;==========================================================
 
-[module/speedtest]
+[module/polybar-speedtest]
 type = custom/ipc
 label = %output%
 ; Run both commands on startup:
 ;   hook-0 = show results (last test or "loading")
 ;   hook-1 = start a new test in the background
-initial = 2
-hook-0 = ~/.config/polybar/scripts/speedtest.py show
-hook-1 = ~/.config/polybar/scripts/speedtest.py run
+initial = 1
+hook-0 = ~/.config/polybar/scripts/polybar-speedtest.py show
+hook-1 = ~/.config/polybar/scripts/polybar-speedtest.py run
 ; On click, trigger a new test
-click-left = ~/.config/polybar/scripts/speedtest.py run
+click-left = ~/.config/polybar/scripts/polybar-speedtest.py run
+background = true
+background-action = run
+background-arg-interval = 300
+background-arg-download =
+background-arg-upload =
 
 ;==========================================================
 ;  Stocks
