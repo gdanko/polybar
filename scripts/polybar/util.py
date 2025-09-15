@@ -5,6 +5,7 @@ from typing import List, Tuple, Optional, Union
 import importlib.util
 import json
 import os
+import psutil
 import re
 import shlex
 import shutil
@@ -12,19 +13,6 @@ import socket
 import subprocess
 import sys
 import time
-
-modules = ['psutil']
-missing = []
-
-for module in modules:
-    try:
-        __import__(module)
-    except ImportError:
-        missing.append(module)
-
-if missing:
-    error_exit(icon=glyphs.md_network_off_outline, message=f'Please install via pip: {", ".join(missing)}')
-    sys.exit(1)
 
 def pprint(input):
     pp(input)

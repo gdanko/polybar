@@ -103,9 +103,6 @@ hook-1 = ~/.config/polybar/scripts/speedtest.py run
 click-left = ~/.config/polybar/scripts/speedtest.py run
 ```
 
-#### Notes
-This module currently play nice in the background, but I am working on this.
-
 ### Stock Quotes
 This module contacts [Yahoo! Finance](https://finance.yahoo.com) and gathers basic information about stock symbols.
 
@@ -287,6 +284,3 @@ user ALL=(ALL) NOPASSWD: /usr/sbin/dmidecode
 
 ## Configuration
 Please see `config.ini.example` for more details
-
-## To Do
-1. Make `speedtest.py` run on an interval
