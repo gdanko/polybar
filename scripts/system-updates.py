@@ -26,7 +26,7 @@ class SystemUpdates(NamedTuple):
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 VALID_TYPES = ['apt', 'brew', 'dnf', 'flatpak', 'mintupdate', 'pacman', 'snap', 'yay', 'yay-aur', 'yum']
 LOGFILE = Path.home() / '.polybar-system-update-result.log'
-LOADING = f'{util.color_title(glyphs.md_package_variant)} Checking updates...'
+LOADING = f'{util.color_title(glyphs.md_timer_outline)} Checking updates...'
 
 logging.basicConfig(
     filename=LOGFILE,
@@ -426,7 +426,7 @@ def cli():
     """
     pass
 
-@cli.command()
+@cli.command(help='Parse the temp file and display its contents', context_settings=CONTEXT_SETTINGS)
 @click.option('-t', '--type', required=True, help=f'The type of update to query; valid choices are: {", ".join(VALID_TYPES)}')
 def show(type):
     """
@@ -440,7 +440,7 @@ def show(type):
         logging.info(f'[show] TMPFILE does not exist')
         print(LOADING)
 
-@cli.command(help='Check available system updates from different sources')
+@cli.command(help='Check available system updates from different sources', context_settings=CONTEXT_SETTINGS)
 @click.option('-t', '--type', required=True, help=f'The type of update to query; valid choices are: {", ".join(VALID_TYPES)}')
 @click.option('-b', '--background', is_flag=True, default=False, help='Run in the background')
 @click.option('-i', '--interval', type=int, default=300, show_default=True, help='The update interval (in seconds)')

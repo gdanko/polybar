@@ -54,7 +54,7 @@ class WeatherData(NamedTuple):
     wind_speed        : Optional[str]   = None
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LOADING = f'{util.color_title(glyphs.md_weather_sunny)} Fetching weather...'
+LOADING = f'{util.color_title(glyphs.md_timer_outline)} Fetching weather...'
 LOGFILE = Path.home() / '.polybar-weather-test-result.log'
 
 logging.basicConfig(
