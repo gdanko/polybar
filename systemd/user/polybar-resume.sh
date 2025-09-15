@@ -13,7 +13,7 @@ Description=User-level Polybar resume watcher
 After=graphical.target
 
 [Service]
-ExecStart=/home/gdanko/.config/polybar/polybar-user-level-resume.sh
+ExecStart=/home/gdanko/.config/polybar/polybar-resume.sh
 Restart=always
 
 [Install]

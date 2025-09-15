@@ -21,3 +21,6 @@ menu-test.sh
 weather.sh
 
 *-output.txt
+
+# Other files
+polybar-resume.sh
