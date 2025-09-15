@@ -222,7 +222,7 @@ def main():
         while True:
             if not util.polybar_is_running():
                 sys.exit(0)
-            _, _, _ = util.run_piped_command('polybar-msg action memory-usage-clickable hook 0')
+            _, _, _ = util.run_piped_command('polybar-msg action memory-usage hook 0')
             time.sleep(args.interval)
         sys.exit(0)
     else:
