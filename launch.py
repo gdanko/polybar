@@ -258,15 +258,18 @@ def kill_polybar_if_running(ipc_enabled: bool=False, pid: str=None):
 def get_background_scripts():
     script_directory = util.get_script_directory()
     processes = []
-    for proc in psutil.process_iter(attrs=['pid', 'cmdline', 'username']):
+    for proc in psutil.process_iter(attrs=['pid', 'cmdline', 'username', 'name']):
         try:
             if proc.info.get('cmdline') is not None and len(proc.info.get('cmdline')) > 0:
                 cmdline = ' '.join(list(proc.info['cmdline']))
+                if len(proc.info['cmdline']) > 2:
+                    cmd_short = ' '.join(list(proc.info['cmdline'][:2]))
                 if cmdline.startswith('python3') and script_directory in cmdline and proc.info.get('username') == getpass.getuser():
                     processes.append({
-                        'cmd'      : cmdline,
-                        'pid'      : proc.info.get('pid'),
-                        'username' : proc.info.get('username')
+                        'cmd'       : cmdline,
+                        'cmd_short' : cmd_short,
+                        'pid'       : proc.info.get('pid'),
+                        'username'  : proc.info.get('username')
                     })
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
@@ -347,7 +350,7 @@ def status(debug, pid, detail):
         print(message)
         if detail:
             for process in processes:
-                print(f'{process["pid"]:<10} {process["cmd"]}')
+                print(f'{process["pid"]:<10} {process["cmd_short"]}')
         sys.exit(0)
     else:
         print('polybar isn\'t running running')
