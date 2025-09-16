@@ -68,7 +68,6 @@ def setup(debug: bool=False):
 #----------------------------
 # Start functions
 #----------------------------
-
 def start_polybar(polybar_config=None, bar_name: str=None, ipc_enabled: bool=False, debug: bool=False, pid: str=None):
     """
     A simple wrapper for starting
@@ -189,7 +188,6 @@ def background(module_name: str=None, str=None, polybar_config=None):
 #----------------------------
 # Stop functions
 #----------------------------
-
 def stop_polybar(ipc_enabled: bool=False, pid: str=None):
     """
     A simple wrapper for stopping
