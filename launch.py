@@ -334,7 +334,8 @@ def restart(debug, pid):
 @cli.command(name='status', help='Get the status of polybar and its background modules')
 @click.option('-d', '--debug', is_flag=True, help='Show debug logging')
 @click.option('-p', '--pid', help='Specify a pid')
-def status(debug, pid):
+@click.option('--detail', is_flag=True, help='Show detailed information about any running background modules')
+def status(debug, pid, detail):
     polybar_config, ipc_enabled = setup(debug=debug)
     pid = polybar_is_running()
     if pid:
@@ -342,8 +343,11 @@ def status(debug, pid):
         processes = get_background_scripts()
         pids = [str(process['pid']) for process in processes if process.get('pid') is not None]
         if len(pids) > 0:
-            message += f' and has {len(pids)} background script {"PID" if len(pids) == 1 else "PIDs"} ({", ".join(pids)})'
+            message += f' and is managing {len(pids)} background {"module" if len(pids) == 1 else "modules"}'
         print(message)
+        if detail:
+            for process in processes:
+                print(f'{process["pid"]:<10} {process["cmd"]}')
         sys.exit(0)
     else:
         print('polybar isn\'t running running')
