@@ -360,13 +360,15 @@ def status(debug, pid, detail):
         print(message)
 
         if detail:
-            longest = 0
+            longest_duration = 0
+            longest_pid = 0
             for process in processes:
                 days, hours, minutes, _ = util.duration(int(time.time()) - process['created'])
-                longest = len(process['duration']) if len(process['duration']) > longest else longest
+                longest_duration = len(process['duration']) if len(process['duration']) > longest_duration else longest_duration
+                longest_pid = len(str(process['pid'])) if len(str(process['pid'])) > longest_pid else longest_pid
 
             for process in processes:
-                print(f'{process["pid"]:<9} {process["duration"]:<{longest}} {process["cmd_short"]}')
+                print(f'{process["pid"]:{longest_pid}} {process["duration"]:<{longest_duration}} {process["cmd_short"]}')
     else:
         print('polybar isn\'t running running')
 
