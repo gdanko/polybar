@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 
+from pprint import pprint
 from scripts.polybar import util
+import click
 import configparser
 import logging
 import os
+import psutil
 import re
 import subprocess
 import sys
 import time
 
+BAR_NAME = 'main'
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
-try:
-    import click
-except ImportError:
-    print(f'Please install click via pip')
-    sys.exit(1)
 
 class RightPadFormatter(logging.Formatter):
     def __init__(self, levelnames):
@@ -29,6 +27,9 @@ class RightPadFormatter(logging.Formatter):
         record.pad = ' ' * (pad_len + 1)  # +1 for spacing
         return super().format(record)
 
+#----------------------------
+# Setup and configuration
+#----------------------------
 def configure_logging(debug: bool=False):
     all_levels = [logging.getLevelName(lvl) for lvl in range(0, 60) if isinstance(logging.getLevelName(lvl), str)]
     handler = logging.StreamHandler()
@@ -36,16 +37,6 @@ def configure_logging(debug: bool=False):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG) if debug else logger.setLevel(logging.INFO)
     logger.addHandler(handler)
-
-def initialize(action):
-    for binary in ['polybar', 'polybar-msg']:
-        if not util.is_binary_installed(binary):
-            logging.error(f'{binary} is not installed')
-            sys.exit(1)
-    
-    if not action:
-        logging.error('You must specify either start or stop')
-        sys.exit(1)
 
 def parse_config(filename: str=None):
     try:
@@ -57,20 +48,44 @@ def parse_config(filename: str=None):
 
     return parser
 
-def kill_polybar_if_running(ipc_enabled: bool=False, pid: str=None):
-    if util.polybar_is_running():
-        if pid:
-            command = f'polybar-msg -p {pid} cmd quit' if ipc_enabled else f'kill {pid}'
-        else:
-            command = f'polybar-msg cmd quit' if ipc_enabled else 'killall -q polybar'
-
-        rc, _, stderr = util.run_piped_command(command)
-        if rc != 0:
-            error = stderr if stderr != '' else 'Unknown error'
-            logging.error(f'Failed to execute {command}: {error}')
+def setup(debug: bool=False):
+    for binary in ['polybar', 'polybar-msg']:
+        if not util.is_binary_installed(binary):
+            logging.error(f'{binary} is not installed')
             sys.exit(1)
-    else:
-        print('Not running')
+
+    configure_logging(debug=debug)
+
+    polybar_config_file = os.path.join(util.get_config_directory(), 'config.ini')
+    polybar_config = parse_config(filename=polybar_config_file)
+
+    if f'bar/{BAR_NAME}' in polybar_config:
+        if 'enable-ipc' in polybar_config[f'bar/{BAR_NAME}']:
+            ipc_enabled = True if polybar_config[f'bar/{BAR_NAME}']['enable-ipc'] == 'true' else False
+
+    return polybar_config, ipc_enabled
+
+#----------------------------
+# Start functions
+#----------------------------
+
+def start_polybar(polybar_config=None, bar_name: str=None, ipc_enabled: bool=False, debug: bool=False, pid: str=None):
+    """
+    A simple wrapper for starting
+    """
+    running, pids = util.process_is_running(name='polybar', full=False)
+    if running and len(pids) > 0:
+        if len(pids) == 1:
+            message = f'polybar is already running with the pid {pids[0]}'
+        elif len(pids) > 1:
+            message = f'{len(pids)} instances of polybar are running with the following pids: {", ".join(pids)}'
+        print(message)
+        sys.exit(0)
+
+    print('Starting polybar')
+    kill_scripts()
+    launch_polybar(bar_name=bar_name)
+    background_processes(polybar_config=polybar_config)
 
 def launch_polybar(bar_name: str=None):
     # Here we'll simulate what's done in launch.sh
@@ -103,11 +118,11 @@ def launch_polybar(bar_name: str=None):
         logging.error(f'Failed to launch Polybar: {e}')
         sys.exit(1)
 
-def background_processes(polybar_config=None, testing: bool=False):
+def background_processes(polybar_config=None):
     all_modules = sorted([section.replace('module/', '') for section in polybar_config.sections() if section.startswith('module/')])
     common_modules = sorted(list(set(find_enabled_modules()) & set(all_modules)))
     for module_name in common_modules:
-        background(module_name=module_name, polybar_config=polybar_config, testing=testing)
+        background(module_name=module_name, polybar_config=polybar_config)
 
 def find_enabled_modules() -> list:
     enabled_modules = []
@@ -125,7 +140,7 @@ def find_enabled_modules() -> list:
 
     return sorted(enabled_modules)
 
-def background(module_name: str=None, str=None, polybar_config=None, testing: bool=False):
+def background(module_name: str=None, str=None, polybar_config=None):
     try:
         module_config = dict(polybar_config[f'module/{module_name}'])
         if 'background' in module_config:
@@ -161,104 +176,113 @@ def background(module_name: str=None, str=None, polybar_config=None, testing: bo
                         command_bits.append(value)
             command_bits.append('--background')
             command = ' '.join(command_bits)
-            ps_command_string = f'python3 {command}'
 
-            if testing:
-                print(f'[TEST] {command}')
-                print(f'[TEST] {ps_command_string}')
-            else:
-                kill_if_running(ps_command_string=ps_command_string)
-
-                try:
-                    logging.debug(f'Attempting to launch {os.path.basename(script_name)} in the background with {command}')
-                    _ = util.run_piped_command(command=command, background=True)
-                except Exception as e:
-                    logging.error(f'Failed to execute {command}: {e}')
-                    sys.exit(1)
+            try:
+                logging.debug(f'Attempting to launch {os.path.basename(script_name)} in the background with {command}')
+                _ = util.run_piped_command(command=command, background=True)
+            except Exception as e:
+                logging.error(f'Failed to execute {command}: {e}')
+                sys.exit(1)
         else:
             logging.warning(f'The module {module_name} cannot be launched in the background due to a configuration setting')
 
-def kill_if_running(ps_command_string: str=None):
-    command = f'pgrep -f "{ps_command_string}"'
-    rc, stdout, stderr = util.run_piped_command(command)
-    if rc == 0 and stdout != '':
-        pids = stdout.split('\n')
-        if len(pids) > 1:
-            logging.warning(f'There are {len(pids)} instances of "{ps_command_string}" running')
-        for pid in pids:
-            logging.debug(f'Attempting to kill "{ps_command_string}" (pid {pid})')
-            command = f'kill {pid}'
-            rc, _, stderr = util.run_piped_command(command)
-            if rc != 0:
-                if stderr:
-                    logging.error(f'Failed to kill pid {pid}: {stderr}')
-                    sys.exit(1)
-                else:
-                    logging.error(f'Failed to kill pid {pid}: Unknown error')
-                    sys.exit(1)
-    else:
-        return
+#----------------------------
+# Stop functions
+#----------------------------
 
-def start(polybar_config=None, bar_name: str=None, ipc_enabled: bool=False, debug: bool=False, test: bool=False, pid: str=None):
-    """
-    A simple wrapper for starting
-    """
-    running, pids = util.process_is_running(name='polybar', full=False)
-    if running and len(pids) > 0:
-        if len(pids) == 1:
-            message = f'polybar is already running with the pid {pids[0]}'
-        elif len(pids) > 1:
-            message = f'{len(pids)} instances of polybar are running with the following pids: {", ".join(pids)}'
-        print(message)
-        sys.exit(0)
-
-    if test:
-        background_processes(polybar_config=polybar_config, testing=test)
-        sys.exit(0)
-    
-    kill_polybar_if_running(ipc_enabled=ipc_enabled)
-    print('Starting polybar')
-    launch_polybar(bar_name=bar_name)
-    background_processes(polybar_config=polybar_config, testing=test)
-
-def stop(ipc_enabled: bool=False, pid: str=None):
+def stop_polybar(ipc_enabled: bool=False, pid: str=None):
     """
     A simple wrapper for stopping
     """
     print('Stopping polybar')
     kill_polybar_if_running(ipc_enabled=ipc_enabled, pid=pid)
+    time.sleep(.5)
+    kill_scripts()
 
-@click.command(help='stop / start / restart polybar', context_settings=CONTEXT_SETTINGS)
-@click.argument('action', required=False, type=click.Choice(['start', 'stop', 'restart']))
-@click.option('-d', '--debug', is_flag=True, help='Enable debug mode')
-@click.option('-t', '--test', is_flag=True, help='Enable test mode')
+def kill_polybar_if_running(ipc_enabled: bool=False, pid: str=None):
+    if util.polybar_is_running():
+        if pid:
+            command = f'polybar-msg -p {pid} cmd quit' if ipc_enabled else f'kill {pid}'
+        else:
+            command = f'polybar-msg cmd quit' if ipc_enabled else 'killall -q polybar'
+
+        rc, _, stderr = util.run_piped_command(command)
+        if rc != 0:
+            error = stderr if stderr != '' else 'Unknown error'
+            logging.error(f'Failed to execute {command}: {error}')
+            sys.exit(1)
+    else:
+        print('Not running')
+
+def kill_scripts():
+    """
+    The scripts should die on their own if polybar dies, but if the
+    interval is long, there will be a fair amount of time before it dies
+    """
+    script_directory = util.get_script_directory()
+    processes = []
+    for proc in psutil.process_iter(attrs=['pid', 'cmdline']):
+        try:
+            if proc.info.get('cmdline') is not None:
+                if len(proc.info['cmdline']) > 0:
+                    cmdline = ' '.join(list(proc.info['cmdline']))
+                    if cmdline.startswith('python3') and script_directory in cmdline:
+                        processes.append({
+                            'cmd': cmdline,
+                            'pid': proc.info.get('pid'),
+                        })
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    for process in processes:
+        cmd = process['cmd']
+        pid = process['pid']
+
+        try:
+            logging.debug(f'Attempting to kill "{cmd}" (PID {pid})')
+            proc = psutil.Process(pid)
+            proc.kill()
+        except psutil.NoSuchProcess:
+            logging.warning(f'No such process with PID {pid}')
+        except psutil.AccessDenied:
+            logging.error(f'Permission denied killing PID {pid}')
+
+        time.sleep(.5)
+
+        # Make sure it's gone
+        try:
+            proc = psutil.Process(pid)
+            pprint(proc.info)
+            logging.error(f'Process "{cmd}" with PID ({pid}) was not successfully killed')
+        except psutil.NoSuchProcess:
+            logging.debug(f'Successfully killed PID {pid}')
+
+@click.group(context_settings=CONTEXT_SETTINGS)
+def cli():
+    pass
+
+@cli.command(name='start', help='Start polybar and its backgound modules')
+@click.option('-d', '--debug', is_flag=True, help='Show debug logging')
 @click.option('-p', '--pid', help='Specify a pid')
-def cli(action, debug, test, pid):
-    """
-    stop / start / restart polybar
-    """
-    configure_logging(debug=debug)
-    initialize(action)
+def start(debug, pid):
+    polybar_config, ipc_enabled = setup(debug=debug)
+    start_polybar(polybar_config=polybar_config, bar_name=BAR_NAME, ipc_enabled=ipc_enabled, debug=debug, pid=pid)
 
-    polybar_config_file = os.path.join(util.get_config_directory(), 'config.ini')
-    polybar_config = parse_config(filename=polybar_config_file)
+@cli.command(name='stop', help='Stop polybar and its backgound modules')
+@click.option('-d', '--debug', is_flag=True, help='Show debug logging')
+@click.option('-p', '--pid', help='Specify a pid')
+def stop(debug, pid):
+    _, ipc_enabled = setup(debug=debug)
+    stop_polybar(ipc_enabled=ipc_enabled, pid=pid)
 
-    # dynamically get all bar names and handle them accordingly!
-    bar_name = 'main'
-    if 'bar/main' in polybar_config:
-        if 'enable-ipc' in polybar_config['bar/main']:
-            ipc_enabled = True if polybar_config['bar/main']['enable-ipc'] == 'true' else False
-
-    if action == 'start':
-        start(polybar_config=polybar_config, bar_name=bar_name, ipc_enabled=ipc_enabled, debug=debug, test=test, pid=pid)
-
-    elif action == 'stop':
-        stop(ipc_enabled=ipc_enabled, pid=pid)
-    
-    elif action == 'restart':
-        stop(ipc_enabled=ipc_enabled)
-        time.sleep(2)
-        start(polybar_config=polybar_config, bar_name=bar_name, ipc_enabled=ipc_enabled,debug=debug, test=test, pid=pid)
+@cli.command(name='restart', help='Restart polybar and its backgound modules')
+@click.option('-d', '--debug', is_flag=True, help='Show debug logging')
+@click.option('-p', '--pid', help='Specify a pid')
+def restart(debug, pid):
+    polybar_config, ipc_enabled = setup(debug=debug)
+    stop_polybar(ipc_enabled=ipc_enabled)
+    time.sleep(.5)
+    start_polybar(polybar_config=polybar_config, bar_name=BAR_NAME, ipc_enabled=ipc_enabled,debug=debug, pid=pid)
 
 if __name__ == '__main__':
     cli()
