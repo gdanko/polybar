@@ -112,8 +112,8 @@ background-arg-upload =
 #### Notes
 The speedometer icon is dynamic. It shows slow, medium, or fast depending on the following:
 - If only the download test is enabled, the icon is based on download speed.
-- If both download and upload tests are enabled, the icon is based on the download speed.
 - If only the upload test is enabled, the icon is based on the upload speed.
+- If both download and upload tests are enabled, the icon is based on and average of both speeds.
 
 ### Stock Quotes
 This module contacts [Yahoo! Finance](https://finance.yahoo.com) and gathers basic information about stock symbols.
