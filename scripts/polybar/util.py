@@ -167,7 +167,7 @@ def byte_converter(number: int=0, unit: Optional[str] = None, use_int: bool=Fals
             return f'{number} {suffix}'
 
 #==========================================================
-#  Time conversion
+#  Time functions
 #==========================================================
 
 def to_unix_time(input: str=None) -> int:
@@ -197,6 +197,15 @@ def to_24hour_time(input: int=0):
         return dt.strftime("%H:%M")
     except:
         return None
+
+def duration(seconds: int=0):
+    seconds = int(seconds)
+    days = int(seconds / 86400)
+    hours = int(((seconds - (days * 86400)) / 3600))
+    minutes = int(((seconds - days * 86400 - hours * 3600) / 60))
+    secs = int((seconds - (days * 86400) - (hours * 3600) - (minutes * 60)))
+
+    return days, hours, minutes, secs
 
 #==========================================================
 #  File and directory
