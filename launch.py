@@ -4,6 +4,7 @@ from pprint import pprint
 from scripts.polybar import util
 import click
 import configparser
+import getpass
 import logging
 import os
 import psutil
@@ -79,7 +80,7 @@ def setup(debug: bool=False):
 #----------------------------
 def start_polybar(polybar_config=None, bar_name: str=None, ipc_enabled: bool=False, debug: bool=False, pid: str=None):
     """
-    A simple wrapper for starting
+    A simple wrapper for starting polybar
     """
     running, pids = util.process_is_running(name='polybar', full=False)
     if running and len(pids) > 0:
@@ -133,7 +134,7 @@ def background_processes(polybar_config=None):
     """
     Find all of the modules that are defined in config.ini, determine which are
     defined in modules-left/right, and if they are configured to run in the 
-    background, attempt to do ss
+    background, attempt to do so
     """
     all_modules = sorted([section.replace('module/', '') for section in polybar_config.sections() if section.startswith('module/')])
     common_modules = sorted(list(set(find_enabled_modules()) & set(all_modules)))
@@ -142,7 +143,7 @@ def background_processes(polybar_config=None):
 
 def find_enabled_modules() -> list:
     """
-    Return a list of enable modules from config.ini
+    Return a list of enabled modules from config.ini
     """
     enabled_modules = []
 
@@ -154,7 +155,7 @@ def find_enabled_modules() -> list:
                 if len(module) > 0:
                     enabled_modules.append(module)
         else:
-            print(f'failed to execute {command}')
+            print(f'failed to execute "{command}"')
             sys.exit(1)
 
     return sorted(enabled_modules)
@@ -200,10 +201,10 @@ def background(module_name: str=None, str=None, polybar_config=None):
             command = ' '.join(command_bits)
 
             try:
-                logging.debug(f'Attempting to launch {os.path.basename(script_name)} in the background with {command}')
+                logging.debug(f'Attempting to launch {os.path.basename(script_name)} in the background with "{command}"')
                 _ = util.run_piped_command(command=command, background=True)
             except Exception as e:
-                logging.error(f'Failed to execute {command}: {e}')
+                logging.error(f'Failed to execute "{command}": {e}')
                 sys.exit(1)
         else:
             logging.warning(f'The module {module_name} cannot be launched in the background due to a configuration setting')
@@ -213,7 +214,7 @@ def background(module_name: str=None, str=None, polybar_config=None):
 #----------------------------
 def stop_polybar(ipc_enabled: bool=False, pid: str=None):
     """
-    A simple wrapper for stopping
+    A simple wrapper for stopping polybar
     """
     print('Stopping polybar')
     kill_polybar_if_running(ipc_enabled=ipc_enabled, pid=pid)
@@ -245,15 +246,16 @@ def kill_scripts():
     """
     script_directory = util.get_script_directory()
     processes = []
-    for proc in psutil.process_iter(attrs=['pid', 'cmdline']):
+    for proc in psutil.process_iter(attrs=['pid', 'cmdline', 'username']):
         try:
             if proc.info.get('cmdline') is not None:
                 if len(proc.info['cmdline']) > 0:
                     cmdline = ' '.join(list(proc.info['cmdline']))
-                    if cmdline.startswith('python3') and script_directory in cmdline:
+                    if cmdline.startswith('python3') and script_directory in cmdline and proc.info.get('username') == getpass.getuser():
                         processes.append({
-                            'cmd': cmdline,
-                            'pid': proc.info.get('pid'),
+                            'cmd'      : cmdline,
+                            'pid'      : proc.info.get('pid'),
+                            'username' : proc.info.get('username')
                         })
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
@@ -307,6 +309,13 @@ def restart(debug, pid):
     stop_polybar(ipc_enabled=ipc_enabled)
     time.sleep(.5)
     start_polybar(polybar_config=polybar_config, bar_name=BAR_NAME, ipc_enabled=ipc_enabled,debug=debug, pid=pid)
+
+@cli.command(name='dummy', help='I am a dummy', hidden=(getpass.getuser() != 'gdanko'))
+@click.option('-d', '--debug', is_flag=True, help='Show debug logging')
+@click.option('-p', '--pid', help='Specify a pid')
+def dummy(debug, pid):
+    polybar_config, ipc_enabled = setup(debug=debug)
+    kill_scripts()
 
 if __name__ == '__main__':
     cli()
