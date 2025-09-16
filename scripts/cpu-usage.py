@@ -12,24 +12,25 @@ import sys
 import time
 
 class CpuInfo(NamedTuple):
-    success   : Optional[bool]  = False
-    error     : Optional[str]   = None
-    model     : Optional[str]   = None
-    freq      : Optional[str]   = None
-    cores     : Optional[int]   = 0
-    idle      : Optional[float] = 0.0
-    nice      : Optional[float] = 0.0
-    system    : Optional[float] = 0.0
-    user      : Optional[float] = 0.0
-    iowait    : Optional[float] = 0.0
-    irq       : Optional[float] = 0.0
-    softirq   : Optional[float] = 0.0
-    steal     : Optional[float] = 0.0
-    guest     : Optional[float] = 0.0
-    guestnice : Optional[float] = 0.0
-    load1     : Optional[float] = 0.0
-    load5     : Optional[float] = 0.0
-    load15    : Optional[float] = 0.0
+    success        : Optional[bool]  = False
+    error          : Optional[str]   = None
+    model          : Optional[str]   = None
+    freq           : Optional[str]   = None
+    cores_logical  : Optional[int]   = 0
+    cores_physical : Optional[int]   = 0
+    idle           : Optional[float] = 0.0
+    nice           : Optional[float] = 0.0
+    system         : Optional[float] = 0.0
+    user           : Optional[float] = 0.0
+    iowait         : Optional[float] = 0.0
+    irq            : Optional[float] = 0.0
+    softirq        : Optional[float] = 0.0
+    steal          : Optional[float] = 0.0
+    guest          : Optional[float] = 0.0
+    guestnice      : Optional[float] = 0.0
+    load1          : Optional[float] = 0.0
+    load5          : Optional[float] = 0.0
+    load15         : Optional[float] = 0.0
 
 def get_statefile() -> str:
     statefile = os.path.basename(__file__)
@@ -69,11 +70,20 @@ def get_cpu_freq():
     else:
         return 'Unknown CPU freq'
 
-def get_cpu_cores():
+def get_logical_cpu_cores():
     command = 'grep -c ^processor /proc/cpuinfo'
     rc, stdout, _ = util.run_piped_command(command)
     if rc == 0 and stdout != '':
         return int(stdout)
+
+    return -1
+
+def get_physical_cpu_cores():
+    command = 'grep -m 1 "cpu cores" /proc/cpuinfo'
+    rc, stdout, _ = util.run_piped_command(command)
+    if rc == 0 and stdout != '':
+        physical_cores = re.split(r'\s+:\s+', stdout)[1]
+        return int(physical_cores)
 
     return -1
 
@@ -109,23 +119,24 @@ def get_cpu_info() -> CpuInfo:
         if stdout != '':
             values = re.split(r'\s+', stdout)
             cpu_info = CpuInfo(
-                success   = True,
-                model     = get_cpu_type(),
-                freq      = get_cpu_freq(),
-                cores     = get_cpu_cores(),
-                idle      = util.pad_float(values[12]),
-                nice      = util.pad_float(values[4]),
-                system    = util.pad_float(values[5]),
-                user      = util.pad_float(values[3]),
-                iowait    = util.pad_float(values[6]),
-                irq       = util.pad_float(values[7]),
-                softirq   = util.pad_float(values[7]),
-                steal     = util.pad_float(values[9]),
-                guest     = util.pad_float(values[10]),
-                guestnice = util.pad_float(values[11]),
-                load1     = util.pad_float(load_averages[0]),
-                load5     = util.pad_float(load_averages[1]),
-                load15    = util.pad_float(load_averages[2]),
+                success            = True,
+                model              = get_cpu_type(),
+                freq               = get_cpu_freq(),
+                cores_logical      = get_logical_cpu_cores(),
+                cores_physical     = get_physical_cpu_cores(),
+                idle               = util.pad_float(values[12]),
+                nice               = util.pad_float(values[4]),
+                system             = util.pad_float(values[5]),
+                user               = util.pad_float(values[3]),
+                iowait             = util.pad_float(values[6]),
+                irq                = util.pad_float(values[7]),
+                softirq            = util.pad_float(values[7]),
+                steal              = util.pad_float(values[9]),
+                guest              = util.pad_float(values[10]),
+                guestnice          = util.pad_float(values[11]),
+                load1              = util.pad_float(load_averages[0]),
+                load5              = util.pad_float(load_averages[1]),
+                load15             = util.pad_float(load_averages[2]),
             )
         else:
             cpu_info = CpuInfo(
@@ -176,7 +187,7 @@ def main():
             if mode == 0:
                 output = f'{util.color_title(get_icon())} user {cpu_info.user}%, sys {cpu_info.system}%, idle {cpu_info.idle}%'
             elif mode == 1:
-                output = f'{util.color_title(get_icon())} {cpu_info.cores} x {cpu_info.model} @ {cpu_info.freq}'
+                output = f'{util.color_title(get_icon())} {cpu_info.cores_physical}C/{cpu_info.cores_logical}T x {cpu_info.model} @ {cpu_info.freq}'
             elif mode == 2:
                 output = f'{util.color_title(get_icon())} load {cpu_info.load1},  {cpu_info.load5},  {cpu_info.load15}'
             print(output)
