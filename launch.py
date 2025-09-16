@@ -31,6 +31,9 @@ class RightPadFormatter(logging.Formatter):
 # Setup and configuration
 #----------------------------
 def configure_logging(debug: bool=False):
+    """
+    Set up the logging
+    """
     all_levels = [logging.getLevelName(lvl) for lvl in range(0, 60) if isinstance(logging.getLevelName(lvl), str)]
     handler = logging.StreamHandler()
     handler.setFormatter(RightPadFormatter(all_levels))
@@ -39,6 +42,9 @@ def configure_logging(debug: bool=False):
     logger.addHandler(handler)
 
 def parse_config(filename: str=None):
+    """
+    Parse config.ini and return it as a ConfigParser object
+    """
     try:
         parser = configparser.ConfigParser(interpolation=None)
         parser.read(filename)
@@ -49,6 +55,9 @@ def parse_config(filename: str=None):
     return parser
 
 def setup(debug: bool=False):
+    """
+    Run some quick checks and return relevant bits
+    """
     for binary in ['polybar', 'polybar-msg']:
         if not util.is_binary_installed(binary):
             logging.error(f'{binary} is not installed')
@@ -87,6 +96,9 @@ def start_polybar(polybar_config=None, bar_name: str=None, ipc_enabled: bool=Fal
     background_processes(polybar_config=polybar_config)
 
 def launch_polybar(bar_name: str=None):
+    """
+    Attempt to launch polybar
+    """
     # Here we'll simulate what's done in launch.sh
     logfile_name = os.path.join(
         util.get_home_directory(),
@@ -118,12 +130,20 @@ def launch_polybar(bar_name: str=None):
         sys.exit(1)
 
 def background_processes(polybar_config=None):
+    """
+    Find all of the modules that are defined in config.ini, determine which are
+    defined in modules-left/right, and if they are configured to run in the 
+    background, attempt to do ss
+    """
     all_modules = sorted([section.replace('module/', '') for section in polybar_config.sections() if section.startswith('module/')])
     common_modules = sorted(list(set(find_enabled_modules()) & set(all_modules)))
     for module_name in common_modules:
         background(module_name=module_name, polybar_config=polybar_config)
 
 def find_enabled_modules() -> list:
+    """
+    Return a list of enable modules from config.ini
+    """
     enabled_modules = []
 
     for orientation in ['left', 'right']:
@@ -140,6 +160,9 @@ def find_enabled_modules() -> list:
     return sorted(enabled_modules)
 
 def background(module_name: str=None, str=None, polybar_config=None):
+    """
+    Attempt to put a module into the background with its configured flags
+    """
     try:
         module_config = dict(polybar_config[f'module/{module_name}'])
         if 'background' in module_config:
@@ -198,6 +221,9 @@ def stop_polybar(ipc_enabled: bool=False, pid: str=None):
     kill_scripts()
 
 def kill_polybar_if_running(ipc_enabled: bool=False, pid: str=None):
+    """
+    Kill polybar if it's running
+    """
     if util.polybar_is_running():
         if pid:
             command = f'polybar-msg -p {pid} cmd quit' if ipc_enabled else f'kill {pid}'
