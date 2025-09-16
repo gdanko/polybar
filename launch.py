@@ -367,9 +367,10 @@ def status(debug, pid, detail):
 
             for process in processes:
                 print(f'{process["pid"]:<9} {process["duration"]:<{longest}} {process["cmd_short"]}')
-        sys.exit(0)
     else:
         print('polybar isn\'t running running')
+
+    sys.exit(0)
 
 @cli.command(name='dummy', help='I am a dummy', hidden=(getpass.getuser() != 'gdanko'))
 @click.option('-d', '--debug', is_flag=True, help='Show debug logging')
