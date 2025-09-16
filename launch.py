@@ -281,13 +281,13 @@ def stop_scripts():
     processes = get_background_scripts()
 
     if len(processes) > 0:
-        print(f'killing {len(processes)} background {"script" if len(processes) == 1 else "scripts"}')
+        print(f'stopping {len(processes)} background {"script" if len(processes) == 1 else "scripts"}')
         for process in processes:
             cmd = process['cmd']
             pid = process['pid']
 
             try:
-                logging.debug(f'attempting to kill "{cmd}" (PID {pid})')
+                logging.debug(f'attempting to stop "{cmd}" (PID {pid})')
                 proc = psutil.Process(pid)
                 proc.send_signal(signal.SIGTERM)
             except psutil.NoSuchProcess:
