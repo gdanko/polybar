@@ -202,7 +202,7 @@ def background(module_name: str=None, str=None, polybar_config=None):
 
             for key, value in module_config.items():
                 if key.startswith('background-arg-'):
-                    command_bits.append(f'--{key.split('-')[2]}')
+                    command_bits.append(f'--{key.split('background-arg-')[1]}')
                     if value and value != '':
                         command_bits.append(value)
             command_bits.append('--background')

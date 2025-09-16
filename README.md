@@ -83,25 +83,37 @@ background-arg-interval = 5
 ```
 
 ### Speedtest
-This module connects to [speedtest.net](https://speedtest.net) and gathers download and/or upload speeds. You can left click on it to refresh its output. I added another hack [here](#speedtest-hack) for putting a `Loading...` placeholder while the script fetches the data.
+This module connects to [speedtest.net](https://speedtest.net) and gathers download and/or upload speeds. You can left click on it to refresh its output. I added another hack [here](#speedtest-hack) for putting a `Running speedtest...` placeholder while the script fetches the data.
 
 #### Output Formats
-1. `ping 10.44ms ↓403.13 Mbit/s ↑493.98 Mbit/s`
+1. `<icon> ↓403.13 Mbit/s ↑493.98 Mbit/s`
 
 #### Configuration
+In order for it to be launched in the background, you will need to launch it via `launch.py` or a script with similar functionality. The `background-*` parameters are used to instruct `launch.py` how to properly put the module's worker in the background.
 ```
-[module/speedtest]
+[module/polybar-speedtest]
 type = custom/ipc
 label = %output%
 ; Run both commands on startup:
 ;   hook-0 = show results (last test or "loading")
 ;   hook-1 = start a new test in the background
-initial = 2
-hook-0 = ~/.config/polybar/scripts/speedtest.py show
-hook-1 = ~/.config/polybar/scripts/speedtest.py run
+initial = 1
+hook-0 = ~/.config/polybar/scripts/polybar-speedtest.py show
+hook-1 = ~/.config/polybar/scripts/polybar-speedtest.py run
 ; On click, trigger a new test
-click-left = ~/.config/polybar/scripts/speedtest.py run
+click-left = ~/.config/polybar/scripts/polybar-speedtest.py run
+background = true
+background-action = run
+background-arg-interval = 300
+background-arg-download =
+background-arg-upload =
 ```
+
+#### Notes
+The speedometer icon is dynamic. It shows slow, medium, or fast depending on the following:
+- If only the download test is enabled, the icon is based on download speed.
+- If only the upload test is enabled, the icon is based on the upload speed.
+- If both download and upload tests are enabled, the icon is based on and average of both speeds.
 
 ### Stock Quotes
 This module contacts [Yahoo! Finance](https://finance.yahoo.com) and gathers basic information about stock symbols.
@@ -191,14 +203,21 @@ In order for it to be launched in the background, you will need to launch it via
 [weather-base]
 type = custom/ipc
 label = %output%
-initial = 2
+initial = 1
 
 [module/weather-san-diego]
 inherit = weather-base
 hook-0 = ~/.config/polybar/scripts/weather.py show --location "San Diego, CA, US" --label "san-diego"
 hook-1 = ~/.config/polybar/scripts/weather.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego"
-click-left = ~/.config/polybar/scripts/weather.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego" --toggle
-click-right = ~/.config/polybar/scripts/weather.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego"
+click-left = ~/.config/polybar/scripts/weather.py run --api-key "<your_weather_api_key>" --location "San Diego, CA, US" --label "san-diego" --toggle
+click-right = ~/.config/polybar/scripts/weather.py run --api-key "<your_weather_api_key>" --location "San Diego, CA, US" --label "san-diego"
+background = true
+background-action = run
+background-script = weather.py
+background-arg-api-key = <your_weather_api_key>
+background-arg-location = "San Diego, CA, US"
+background-arg-label = san-diego
+background-arg-interval = 300
 ```
 
 ### Wi-Fi Status
