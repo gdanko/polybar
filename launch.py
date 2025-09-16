@@ -82,19 +82,26 @@ def start_polybar(polybar_config=None, bar_name: str=None, ipc_enabled: bool=Fal
     """
     A simple wrapper for starting polybar
     """
-    running, pids = util.process_is_running(name='polybar', full=False)
-    if running and len(pids) > 0:
-        if len(pids) == 1:
-            message = f'polybar is already running with the pid {pids[0]}'
-        elif len(pids) > 1:
-            message = f'{len(pids)} instances of polybar are running with the following pids: {", ".join(pids)}'
-        print(message)
+    pid = polybar_is_running()
+    if pid:
+        print(f'polybar is running with PID {pid}; please use stop or restart')
         sys.exit(0)
 
     print('Starting polybar')
     kill_scripts()
     launch_polybar(bar_name=bar_name)
     background_processes(polybar_config=polybar_config)
+
+def polybar_is_running():
+    for proc in psutil.process_iter(attrs=['pid', 'cmdline', 'username']):
+        try:
+            if proc.info.get('cmdline') is not None and len(proc.info.get('cmdline')) > 0:
+                cmdline = ' '.join(list(proc.info['cmdline']))
+                if cmdline == f'polybar {BAR_NAME}' and proc.info.get('username') == getpass.getuser():
+                    return proc.info.get('pid')
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return None
 
 def launch_polybar(bar_name: str=None):
     """
@@ -216,6 +223,11 @@ def stop_polybar(ipc_enabled: bool=False, pid: str=None):
     """
     A simple wrapper for stopping polybar
     """
+    pid = polybar_is_running()
+    if not pid:
+        print('polybar isn\'t running')
+        sys.exit(0)
+
     print('Stopping polybar')
     kill_polybar_if_running(ipc_enabled=ipc_enabled, pid=pid)
     time.sleep(.5)
@@ -225,7 +237,8 @@ def kill_polybar_if_running(ipc_enabled: bool=False, pid: str=None):
     """
     Kill polybar if it's running
     """
-    if util.polybar_is_running():
+    pid = polybar_is_running()
+    if polybar_is_running():
         if pid:
             command = f'polybar-msg -p {pid} cmd quit' if ipc_enabled else f'kill {pid}'
         else:
@@ -239,26 +252,30 @@ def kill_polybar_if_running(ipc_enabled: bool=False, pid: str=None):
     else:
         print('Not running')
 
+def get_background_scripts():
+    script_directory = util.get_script_directory()
+    processes = []
+    for proc in psutil.process_iter(attrs=['pid', 'cmdline', 'username']):
+        try:
+            if proc.info.get('cmdline') is not None and len(proc.info.get('cmdline')) > 0:
+                cmdline = ' '.join(list(proc.info['cmdline']))
+                if cmdline.startswith('python3') and script_directory in cmdline and proc.info.get('username') == getpass.getuser():
+                    processes.append({
+                        'cmd'      : cmdline,
+                        'pid'      : proc.info.get('pid'),
+                        'username' : proc.info.get('username')
+                    })
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    return processes
+
 def kill_scripts():
     """
     The scripts should die on their own if polybar dies, but if the
     interval is long, there will be a fair amount of time before it dies
     """
-    script_directory = util.get_script_directory()
-    processes = []
-    for proc in psutil.process_iter(attrs=['pid', 'cmdline', 'username']):
-        try:
-            if proc.info.get('cmdline') is not None:
-                if len(proc.info['cmdline']) > 0:
-                    cmdline = ' '.join(list(proc.info['cmdline']))
-                    if cmdline.startswith('python3') and script_directory in cmdline and proc.info.get('username') == getpass.getuser():
-                        processes.append({
-                            'cmd'      : cmdline,
-                            'pid'      : proc.info.get('pid'),
-                            'username' : proc.info.get('username')
-                        })
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
+    processes = get_background_scripts()
 
     for process in processes:
         cmd = process['cmd']
@@ -310,12 +327,29 @@ def restart(debug, pid):
     time.sleep(.5)
     start_polybar(polybar_config=polybar_config, bar_name=BAR_NAME, ipc_enabled=ipc_enabled,debug=debug, pid=pid)
 
+@cli.command(name='status', help='Get the status of polybar and its background modules')
+@click.option('-d', '--debug', is_flag=True, help='Show debug logging')
+@click.option('-p', '--pid', help='Specify a pid')
+def status(debug, pid):
+    polybar_config, ipc_enabled = setup(debug=debug)
+    pid = polybar_is_running()
+    if pid:
+        message = f'polybar is running with PID {pid}'
+        processes = get_background_scripts()
+        pids = [str(process['pid']) for process in processes if process.get('pid') is not None]
+        if len(pids) > 0:
+            message += f' and has {len(pids)} background script {"PID" if len(pids) == 1 else "PIDs"} ({", ".join(pids)})'
+        print(message)
+        sys.exit(0)
+    else:
+        print('polybar isn\'t running running')
+
 @cli.command(name='dummy', help='I am a dummy', hidden=(getpass.getuser() != 'gdanko'))
 @click.option('-d', '--debug', is_flag=True, help='Show debug logging')
 @click.option('-p', '--pid', help='Specify a pid')
 def dummy(debug, pid):
     polybar_config, ipc_enabled = setup(debug=debug)
-    kill_scripts()
+    print('I do nothing')
 
 if __name__ == '__main__':
     cli()
