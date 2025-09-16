@@ -14,23 +14,25 @@ import time
 class CpuInfo(NamedTuple):
     success        : Optional[bool]  = False
     error          : Optional[str]   = None
-    model          : Optional[str]   = None
-    freq           : Optional[str]   = None
     cores_logical  : Optional[int]   = 0
     cores_physical : Optional[int]   = 0
-    idle           : Optional[float] = 0.0
-    nice           : Optional[float] = 0.0
-    system         : Optional[float] = 0.0
-    user           : Optional[float] = 0.0
-    iowait         : Optional[float] = 0.0
-    irq            : Optional[float] = 0.0
-    softirq        : Optional[float] = 0.0
-    steal          : Optional[float] = 0.0
+    freq_cur       : Optional[int]   = 0
+    freq_max       : Optional[int]   = 0
+    freq_min       : Optional[str]   = 0
     guest          : Optional[float] = 0.0
     guestnice      : Optional[float] = 0.0
+    idle           : Optional[float] = 0.0
+    iowait         : Optional[float] = 0.0
+    irq            : Optional[float] = 0.0
     load1          : Optional[float] = 0.0
-    load5          : Optional[float] = 0.0
     load15         : Optional[float] = 0.0
+    load5          : Optional[float] = 0.0
+    model          : Optional[str]   = None
+    nice           : Optional[float] = 0.0
+    softirq        : Optional[float] = 0.0
+    steal          : Optional[float] = 0.0
+    system         : Optional[float] = 0.0
+    user           : Optional[float] = 0.0
 
 def get_statefile() -> str:
     statefile = os.path.basename(__file__)
@@ -54,21 +56,31 @@ def get_cpu_type():
         return 'Unknown CPU model'
 
 def get_cpu_freq():
-    command = f'lscpu | grep "CPU max MHz"'
-    rc, stdout, _ = util.run_piped_command(command)
-    if rc == 0:
-        bits = re.split(r'\s*:\s*', stdout)
-        if len(bits) == 2:
-            # error checking
-            freq = int(float(bits[1]))
-            if freq < 1000:
-                return f'{freq} MHz'
-            else:
-                return f'{util.pad_float(float(freq / 1000))} GHz'
-        else:
-            return 'Unknown CPU freq'
-    else:
-        return 'Unknown CPU freq'
+    rc, stdout, _ = util.run_piped_command('cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq')
+    freq_cur = stdout if (rc == 0 and stdout and stdout != '') else -1
+
+    rc, stdout, _ = util.run_piped_command('cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq')
+    freq_min = stdout if (rc == 0 and stdout and stdout != '') else -1
+
+    rc, stdout, _ = util.run_piped_command('cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq')
+    freq_max = stdout if (rc == 0 and stdout and stdout != '') else -1
+
+    return int(freq_cur) * 1000, int(freq_min) * 1000, int(freq_max) * 1000
+    # command = f'lscpu | grep "CPU max MHz"'
+    # rc, stdout, _ = util.run_piped_command(command)
+    # if rc == 0:
+    #     bits = re.split(r'\s*:\s*', stdout)
+    #     if len(bits) == 2:
+    #         # error checking
+    #         freq = int(float(bits[1]))
+    #         if freq < 1000:
+    #             return f'{freq} MHz'
+    #         else:
+    #             return f'{util.pad_float(float(freq / 1000))} GHz'
+    #     else:
+    #         return 'Unknown CPU freq'
+    # else:
+    #     return 'Unknown CPU freq'
 
 def get_logical_cpu_cores():
     command = 'grep -c ^processor /proc/cpuinfo'
@@ -117,13 +129,16 @@ def get_cpu_info() -> CpuInfo:
     rc, stdout, stderr = util.run_piped_command(f'mpstat | tail -n 1')
     if rc == 0:
         if stdout != '':
+            freq_cur, freq_min, freq_max = get_cpu_freq()
             values = re.split(r'\s+', stdout)
             cpu_info = CpuInfo(
                 success            = True,
                 model              = get_cpu_type(),
-                freq               = get_cpu_freq(),
                 cores_logical      = get_logical_cpu_cores(),
                 cores_physical     = get_physical_cpu_cores(),
+                freq_cur           = freq_cur,
+                freq_max           = freq_max,
+                freq_min           = freq_min,
                 idle               = util.pad_float(values[12]),
                 nice               = util.pad_float(values[4]),
                 system             = util.pad_float(values[5]),
@@ -158,7 +173,7 @@ def get_cpu_info() -> CpuInfo:
     return cpu_info
 
 def main():
-    mode_count = 3
+    mode_count = 4
     parser = argparse.ArgumentParser(description='Get CPU usage from mpstat(1)')
     parser.add_argument('-t', '--toggle', action='store_true', help='Toggle the output format', required=False)
     parser.add_argument('-i', '--interval', help='The update interval (in seconds)', required=False, default=2, type=int)
@@ -187,9 +202,11 @@ def main():
             if mode == 0:
                 output = f'{util.color_title(get_icon())} user {cpu_info.user}%, sys {cpu_info.system}%, idle {cpu_info.idle}%'
             elif mode == 1:
-                output = f'{util.color_title(get_icon())} {cpu_info.cores_physical}C/{cpu_info.cores_logical}T x {cpu_info.model} @ {cpu_info.freq}'
-            elif mode == 2:
                 output = f'{util.color_title(get_icon())} load {cpu_info.load1},  {cpu_info.load5},  {cpu_info.load15}'
+            elif mode == 2:
+                output = f'{util.color_title(get_icon())} {cpu_info.cores_physical}C/{cpu_info.cores_logical}T x {cpu_info.model}'
+            elif mode == 3:
+                output = f'{util.color_title(get_icon())} current: {util.processor_speed(cpu_info.freq_cur)}, min: {util.processor_speed(cpu_info.freq_min)}, max: {util.processor_speed(cpu_info.freq_max)}'
             print(output)
             sys.exit(0)
         else:
