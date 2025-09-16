@@ -9,6 +9,7 @@ import logging
 import os
 import psutil
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -50,7 +51,7 @@ def parse_config(filename: str=None):
         parser = configparser.ConfigParser(interpolation=None)
         parser.read(filename)
     except Exception as e:
-        logging.error(f'Failed to parse the config file {filename}: {e}')
+        logging.error(f'failed to parse the config file {filename}: {e}')
         sys.exit(1)
 
     return parser
@@ -87,8 +88,8 @@ def start_polybar(polybar_config=None, bar_name: str=None, ipc_enabled: bool=Fal
         print(f'polybar is running with PID {pid}; please use stop or restart')
         sys.exit(0)
 
-    print('Starting polybar')
-    kill_scripts()
+    print('starting polybar')
+    stop_scripts()
     launch_polybar(bar_name=bar_name)
     background_processes(polybar_config=polybar_config)
 
@@ -119,7 +120,7 @@ def launch_polybar(bar_name: str=None):
         with open(logfile_name, 'a') as f:
             f.write('---\n')
     except Exception as e:
-        logging.error(f'Failed to append the log file {logfile_name}: {e}')
+        logging.error(f'failed to append the log file {logfile_name}: {e}')
         sys.exit(1)
 
     # Step 2: Start polybar, redirect output, and run it in the background detached
@@ -132,9 +133,9 @@ def launch_polybar(bar_name: str=None):
                 stderr     = subprocess.STDOUT,
                 preexec_fn = os.setpgrp  # Detach like 'disown'
             )
-            print(f'Successfully launched Polybar with PID {proc.pid}')
+            print(f'successfully launched polybar with PID {proc.pid}')
     except Exception as e:
-        logging.error(f'Failed to launch Polybar: {e}')
+        logging.error(f'failed to launch polybar: {e}')
         sys.exit(1)
 
 def background_processes(polybar_config=None):
@@ -176,7 +177,7 @@ def background(module_name: str=None, str=None, polybar_config=None):
         if 'background' in module_config:
             module_config['background'] = True if module_config['background'] == 'true' else False
     except Exception as e:
-        logging.error(f'Failed to parse the configuration for module/{module_name}: {e}')
+        logging.error(f'failed to parse the configuration for module/{module_name}: {e}')
         sys.exit(1)
 
     if 'background-script' in module_config:
@@ -187,11 +188,11 @@ def background(module_name: str=None, str=None, polybar_config=None):
     if 'background' in module_config:
         if module_config['background']:
             if not util.file_exists(script_name):
-                logging.error(f'The script {script_name} doesn\'t exist')
+                logging.error(f'the script {script_name} doesn\'t exist')
                 sys.exit(1)
 
             if not util.file_is_executable(script_name):
-                logging.error(f'The script {script_name} isn\'t executable')
+                logging.error(f'the script {script_name} isn\'t executable')
                 sys.exit(1)
 
             command_bits = [ script_name ]
@@ -208,13 +209,13 @@ def background(module_name: str=None, str=None, polybar_config=None):
             command = ' '.join(command_bits)
 
             try:
-                logging.debug(f'Attempting to launch {os.path.basename(script_name)} in the background with "{command}"')
+                logging.debug(f'attempting to launch {os.path.basename(script_name)} in the background with "{command}"')
                 _ = util.run_piped_command(command=command, background=True)
             except Exception as e:
-                logging.error(f'Failed to execute "{command}": {e}')
+                logging.error(f'failed to execute "{command}": {e}')
                 sys.exit(1)
         else:
-            logging.warning(f'The module {module_name} cannot be launched in the background due to a configuration setting')
+            logging.warning(f'the module {module_name} cannot be launched in the background due to a configuration setting')
 
 #----------------------------
 # Stop functions
@@ -228,10 +229,10 @@ def stop_polybar(ipc_enabled: bool=False, pid: str=None):
         print('polybar isn\'t running')
         sys.exit(0)
 
-    print('Stopping polybar')
+    print('stopping polybar')
     kill_polybar_if_running(ipc_enabled=ipc_enabled, pid=pid)
     time.sleep(.5)
-    kill_scripts()
+    stop_scripts()
 
 def kill_polybar_if_running(ipc_enabled: bool=False, pid: str=None):
     """
@@ -242,15 +243,17 @@ def kill_polybar_if_running(ipc_enabled: bool=False, pid: str=None):
         if pid:
             command = f'polybar-msg -p {pid} cmd quit' if ipc_enabled else f'kill {pid}'
         else:
+            # FIND THE RUNNING PID FOR BAR_NAME
             command = f'polybar-msg cmd quit' if ipc_enabled else 'killall -q polybar'
 
         rc, _, stderr = util.run_piped_command(command)
         if rc != 0:
-            error = stderr if stderr != '' else 'Unknown error'
-            logging.error(f'Failed to execute {command}: {error}')
+            error = stderr if stderr != '' else 'unknown error'
+            logging.error(f'failed to execute "{command}": {error}')
             sys.exit(1)
     else:
-        print('Not running')
+        print('polybar isn\'t running')
+        sys.exit(0)
 
 def get_background_scripts():
     script_directory = util.get_script_directory()
@@ -270,35 +273,36 @@ def get_background_scripts():
 
     return processes
 
-def kill_scripts():
+def stop_scripts():
     """
     The scripts should die on their own if polybar dies, but if the
     interval is long, there will be a fair amount of time before it dies
     """
     processes = get_background_scripts()
 
-    for process in processes:
-        cmd = process['cmd']
-        pid = process['pid']
+    if len(processes) > 0:
+        print(f'killing {len(processes)} background {"script" if len(processes) == 1 else "scripts"}')
+        for process in processes:
+            cmd = process['cmd']
+            pid = process['pid']
 
-        try:
-            logging.debug(f'Attempting to kill "{cmd}" (PID {pid})')
-            proc = psutil.Process(pid)
-            proc.kill()
-        except psutil.NoSuchProcess:
-            logging.warning(f'No such process with PID {pid}')
-        except psutil.AccessDenied:
-            logging.error(f'Permission denied killing PID {pid}')
+            try:
+                logging.debug(f'attempting to kill "{cmd}" (PID {pid})')
+                proc = psutil.Process(pid)
+                proc.send_signal(signal.SIGTERM)
+            except psutil.NoSuchProcess:
+                logging.debug(f'no such process with PID {pid}')
+            except psutil.AccessDenied:
+                logging.error(f'permission denied stopping PID {pid}')
 
-        time.sleep(.5)
+            time.sleep(.5)
 
-        # Make sure it's gone
-        try:
-            proc = psutil.Process(pid)
-            pprint(proc.info)
-            logging.error(f'Process "{cmd}" with PID ({pid}) was not successfully killed')
-        except psutil.NoSuchProcess:
-            logging.debug(f'Successfully killed PID {pid}')
+            # Make sure it's gone
+            try:
+                proc = psutil.Process(pid)
+                logging.error(f'process "{cmd}" with PID ({pid}) was not successfully stopped')
+            except psutil.NoSuchProcess:
+                logging.debug(f'successfully stopped PID {pid}')
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 def cli():
@@ -349,7 +353,7 @@ def status(debug, pid):
 @click.option('-p', '--pid', help='Specify a pid')
 def dummy(debug, pid):
     polybar_config, ipc_enabled = setup(debug=debug)
-    print('I do nothing')
+    print('i do nothing')
 
 if __name__ == '__main__':
     cli()
