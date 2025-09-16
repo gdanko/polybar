@@ -16,7 +16,7 @@ This module shows CPU information with four available output formats that can be
 1. `user 0.99%, sys 0.46%, idle 98.43%`
 2. `load 0.20,  0.27,  0.44`
 3. `8C/16T x AMD Ryzen 7 5700U`
-4. `current: 3.29 GHz, min: 400.0 Mhz, max: 4.37 GHz`
+4. `current: 3.29 GHz, min: 400 Mhz, max: 4.37 GHz`
 
 #### Configuration
 In order for it to be launched in the background, you will need to launch it via `launch.py` or a script with similar functionality. The `background-*` parameters are used to instruct `launch.py` how to properly put the module's worker in the background.
