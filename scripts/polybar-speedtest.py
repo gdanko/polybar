@@ -159,7 +159,7 @@ def run(download, upload, bytes, background, interval):
             logging.info('[worker] worker already running, exiting')
             return
 
-        # subprocess.run(['polybar-msg', 'action', f'#polybar-speedtest.send.{LOADING}'])
+        subprocess.run(['polybar-msg', 'action', f'#polybar-speedtest.send.{LOADING}'])
         logging.info('[run] launching background worker')
         subprocess.Popen(
             [__file__, 'worker', str(int(download)), str(int(upload)), str(int(bytes)), str(int(background)), str(interval)],
