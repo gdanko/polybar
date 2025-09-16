@@ -327,7 +327,13 @@ def pad_float(number: int=0) -> str:
     """
     Pad a float to two decimal places.
     """
-    return '{:.2f}'.format(float(number))
+    if type(number) == str:
+        number = float(number)
+
+    if number.is_integer():
+        return str(int(number))
+    else:
+        return f'{number:.2f}'
 
 def to_snake_case(s: str) -> str:
     # Replace anything that's not a letter or number with underscore
