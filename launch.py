@@ -258,19 +258,29 @@ def kill_polybar_if_running(ipc_enabled: bool=False, pid: str=None):
 def get_background_scripts():
     script_directory = util.get_script_directory()
     processes = []
-    for proc in psutil.process_iter(attrs=['pid', 'cmdline', 'username', 'name']):
+    for proc in psutil.process_iter(attrs=['cmdline', 'create_time', 'name', 'pid', 'username' ]):
         try:
             if proc.info.get('cmdline') is not None and len(proc.info.get('cmdline')) > 0:
                 cmdline = ' '.join(list(proc.info['cmdline']))
                 if len(proc.info['cmdline']) > 2:
                     cmd_short = ' '.join(list(proc.info['cmdline'][:2]))
                 if cmdline.startswith('python3') and script_directory in cmdline and proc.info.get('username') == getpass.getuser():
-                    processes.append({
-                        'cmd'       : cmdline,
-                        'cmd_short' : cmd_short,
-                        'pid'       : proc.info.get('pid'),
-                        'username'  : proc.info.get('username')
-                    })
+                    new_process = {
+                        'cmd'      : cmdline,
+                        'cmd_short': cmd_short,
+                        'created'  : int(proc.info.get('create_time')) if proc.info.get('create_time') is not None else 0,
+                        'pid'      : proc.info.get('pid'),
+                        'username' : proc.info.get('username'),
+                    }
+                    days, hours, minutes, _ = util.duration(int(time.time()) - new_process['created'])
+                    if days == 0:
+                        duration = f'[{hours}h {minutes}m]'
+                    else:
+                        duration = f'[{days}d {hours}h {minutes}m]'
+                    new_process['duration'] = duration
+
+                    processes.append(new_process)
+
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
 
@@ -348,9 +358,15 @@ def status(debug, pid, detail):
         if len(pids) > 0:
             message += f' and is managing {len(pids)} background {"module" if len(pids) == 1 else "modules"}'
         print(message)
+
         if detail:
+            longest = 0
             for process in processes:
-                print(f'{process["pid"]:<10} {process["cmd_short"]}')
+                days, hours, minutes, _ = util.duration(int(time.time()) - process['created'])
+                longest = len(process['duration']) if len(process['duration']) > longest else longest
+
+            for process in processes:
+                print(f'{process["pid"]:<9} {process["duration"]:<{longest}} {process["cmd_short"]}')
         sys.exit(0)
     else:
         print('polybar isn\'t running running')
@@ -361,6 +377,7 @@ def status(debug, pid, detail):
 def dummy(debug, pid):
     polybar_config, ipc_enabled = setup(debug=debug)
     print('i do nothing')
+    util.pprint(get_background_scripts())
 
 if __name__ == '__main__':
     cli()
