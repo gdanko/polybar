@@ -112,7 +112,7 @@ def is_worker_running(lockfile: Path) -> bool:
 #  Unit conversersion
 #==========================================================
 
-def network_speed(number: int=0, bytes: bool=False, no_suffix: bool=False) -> str:
+def network_speed(number: int=0, bytes: bool=False) -> str:
     """
     Intelligently determine network speed
     """
@@ -122,9 +122,20 @@ def network_speed(number: int=0, bytes: bool=False, no_suffix: bool=False) -> st
     for unit in ['', 'K', 'M', 'G', 'T', 'P']:
         if abs(number) < 1024.0:
             if bytes:
-                return f'{round(number / 8, 2)} {unit}{suffix}'
-            return f'{round(number, 2)} {unit}{suffix}'
+                return f'{pad_float(number / 8)} {unit}{suffix}'
+            return f'{pad_float(number)} {unit}{suffix}'
         number = number / 1024
+
+def processor_speed(number: int=0) -> str:
+    """
+    Intelligently determine processor speed
+    """
+    suffix = 'Hz'
+
+    for unit in ['', 'K', 'M', 'G', 'T']:
+        if abs(number) < 1000.0:
+            return f'{pad_float(number)} {unit}{suffix}'
+        number = number / 1000
 
 def byte_converter(number: int=0, unit: Optional[str] = None, use_int: bool=False) -> str:
     """
