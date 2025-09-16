@@ -272,11 +272,11 @@ def get_background_scripts():
                         'pid'      : proc.info.get('pid'),
                         'username' : proc.info.get('username'),
                     }
-                    days, hours, minutes, _ = util.duration(int(time.time()) - new_process['created'])
+                    days, hours, minutes, secs = util.duration(int(time.time()) - new_process['created'])
                     if days == 0:
-                        duration = f'[{hours}h {minutes}m]'
+                        duration = f'[{hours}h {minutes}m {secs}s]'
                     else:
-                        duration = f'[{days}d {hours}h {minutes}m]'
+                        duration = f'[{days}d {hours}h {minutes}m {secs}s]'
                     new_process['duration'] = duration
 
                     processes.append(new_process)
