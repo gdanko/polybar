@@ -9,8 +9,8 @@ import re
 import sys
 import time
 
-_disk_identifier: str | None = None
-_disk_label : str | None = None
+_disk_identifier : str | None = None
+_disk_label      : str | None = None
 
 class FilesystemInfo(NamedTuple):
     success    : Optional[bool]  = False
