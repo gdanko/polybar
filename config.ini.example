@@ -293,14 +293,21 @@ tray-spacing = 16pt
 [weather-base]
 type = custom/ipc
 label = %output%
-initial = 2
+initial = 1
 
 [module/weather-san-diego]
 inherit = weather-base
 hook-0 = ~/.config/polybar/scripts/weather.py show --location "San Diego, CA, US" --label "san-diego"
 hook-1 = ~/.config/polybar/scripts/weather.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego"
-click-left = ~/.config/polybar/scripts/weather.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego" --toggle
-click-right = ~/.config/polybar/scripts/weather.py run --location "San Diego, CA, US" --api-key "<your_weather_api_key>" --label "san-diego"
+click-left = ~/.config/polybar/scripts/weather.py run --api-key "<your_weather_api_key>" --location "San Diego, CA, US" --label "san-diego" --toggle
+click-right = ~/.config/polybar/scripts/weather.py run --api-key "<your_weather_api_key>" --location "San Diego, CA, US" --label "san-diego"
+background = true
+background-action = run
+background-script = weather.py
+background-arg-api-key = <your_weather_api_key>
+background-arg-location = "San Diego, CA, US"
+background-arg-label = san-diego
+background-arg-interval = 300
 
 ;==========================================================
 ;  WLAN

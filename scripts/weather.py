@@ -8,16 +8,21 @@ from urllib.request import urlopen, Request
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
+import time
 import urllib.request
 
 util.validate_requirements(required=['click'])
 
 import click
 
-_label: str |None=None
-_location: str | None=None
+LABEL     : str | None=None
+LOCATION  : str | None=None
+LOCKFILE  : str | None=None
+STATEFILE : str | None=None
+TEMPFILE  : str | None=None
 
 class WeatherData(NamedTuple):
     success           : Optional[bool]  = False
@@ -65,28 +70,20 @@ logging.basicConfig(
 )
 
 def set_globals(label: str=None, location: str=None):
-    global _label
-    global _location
-    _label = label
-    _location = location
-
-def get_statefile():
-    global _label
-    global _location
+    global LABEL
+    global LOCATION
+    global STATEFILE
+    global TEMPFILE
+    global LOCKFILE
 
     module = os.path.basename(__file__)
     module_no_ext = os.path.splitext(module)[0]
 
-    return Path.home() / f'.polybar-{module_no_ext}-{_label}-state'    
-
-def get_tempfile():
-    global _label
-    global _location
-
-    module = os.path.basename(__file__)
-    module_no_ext = os.path.splitext(module)[0]
-
-    return Path.home() / f'.polybar-{module_no_ext}-{_label}-result.txt'
+    LABEL     = label
+    LOCATION  = location
+    STATEFILE = Path.home() / f'.polybar-{module_no_ext}-{label}-state'
+    TEMPFILE  = Path.home() / f'.polybar-{module_no_ext}-{LABEL}-result.txt'
+    LOCKFILE  = Path.home() / f'.polybar-{module_no_ext}-{LABEL}.lock'
 
 def get_weather_icon(condition_code, is_day):
     # https://www.weatherapi.com/docs/weather_conditions.json
@@ -176,7 +173,9 @@ def get_weather_icon(condition_code, is_day):
 
     return glyphs.md_weather_sunny
 
-def get_weather_data(api_key, location, use_celsius, label, mode):
+def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, label: str=None, mode: int=0):
+    global TEMPFILE
+
     weather_data = None
 
     url_parts = (
@@ -265,7 +264,6 @@ def get_weather_data(api_key, location, use_celsius, label, mode):
                 location_full  = location,
             )
 
-    tempfile = get_tempfile()
     if weather_data.success:
         current_temp = weather_data.current_temp
         low_temp     = weather_data.todays_low
@@ -279,18 +277,39 @@ def get_weather_data(api_key, location, use_celsius, label, mode):
         wind_degree  = weather_data.wind_degree
         wind_speed   = weather_data.wind_speed
 
+        logging.info('[get_weather] - writing output to TEMPFILE')
+
         if mode == 0:
-            tempfile.write_text(f'{util.color_title(icon)} {location} {current_temp}')
+            TEMPFILE.write_text(f'{util.color_title(icon)} {location} {current_temp}')
         elif mode == 1:
-            tempfile.write_text(f'{util.color_title(icon)} {location} {glyphs.cod_arrow_small_up}{high_temp} {glyphs.cod_arrow_small_down}{low_temp}')
+            TEMPFILE.write_text(f'{util.color_title(icon)} {location} {glyphs.cod_arrow_small_up}{high_temp} {glyphs.cod_arrow_small_down}{low_temp}')
         elif mode == 2:
-            tempfile.write_text(f'{util.color_title(glyphs.fa_wind)} {location} {wind_speed} @ {wind_degree}°')
+            TEMPFILE.write_text(f'{util.color_title(glyphs.fa_wind)} {location} {wind_speed} @ {wind_degree}°')
         elif mode == 3:
-            tempfile.write_text(f'{util.color_title(glyphs.md_weather_sunny)} {location}  {glyphs.weather_sunrise}  {sunrise} {glyphs.weather_sunset}  {sunset}')
+            TEMPFILE.write_text(f'{util.color_title(glyphs.md_weather_sunny)} {location}  {glyphs.weather_sunrise}  {sunrise} {glyphs.weather_sunset}  {sunset}')
         elif mode == 4:
-            tempfile.write_text(f'{util.color_title(glyphs.md_weather_sunny)} {location} {glyphs.weather_moonrise} {moonrise} {glyphs.weather_moonset} {moonset}')
+            TEMPFILE.write_text(f'{util.color_title(glyphs.md_weather_sunny)} {location} {glyphs.weather_moonrise} {moonrise} {glyphs.weather_moonset} {moonset}')
     else:
-        tempfile.write_text(f'{util.color_title(glyphs.md_alert)} {util.color_error(weather_data.error)}')
+        TEMPFILE.write_text(f'{util.color_title(glyphs.md_alert)} {util.color_error(weather_data.error)}')
+
+def cleanup_lockfile():
+    global LOCKFILE
+
+    if LOCKFILE.exists():
+        LOCKFILE.unlink()
+        logging.info(f'[worker] lockfile removed for {LOCKFILE.stem}')
+
+def setup_signal_handlers():
+    def handle_signal(signum, frame):
+        logging.info(f'[worker] caught signal {signum}, exiting')
+        cleanup_lockfile()
+        sys.exit(0)
+
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        try:
+            signal.signal(sig, handle_signal)
+        except Exception as e:
+            logging.error(f"[worker] failed to set signal handler: {e!r}")
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 def cli():
@@ -306,12 +325,13 @@ def show(location, label):
     """
     Display the weather information
     """
+    global TEMPFILE
+
     logging.info('[show] entering function')
     set_globals(label=label, location=location)
-    tempfile = get_tempfile()
 
-    if tempfile.exists():
-        print(tempfile.read_text().strip())
+    if TEMPFILE.exists():
+        print(TEMPFILE.read_text().strip())
     else:
         print(LOADING)
 
@@ -321,19 +341,83 @@ def show(location, label):
 @click.option('-c', '--use-celsius', default=False, is_flag=True, help='Use Celsius instead of Fahrenheit')
 @click.option('--label', required=True, help='A "friendly name" to be used to form the IPC calls')
 @click.option('-t', '--toggle', is_flag=True, help='Toggle the output format', required=False)
-def run(api_key, location, use_celsius, label, toggle):
+@click.option('--background', is_flag=True, default=False, help='Run this script in the background')
+@click.option('-i', '--interval', type=int, default=300, show_default=True, help='The update interval (in seconds)')
+def run(api_key, location, use_celsius, label, toggle, background, interval):
+    global LOCKFILE
+    global STATEFILE
+
     mode_count = 5
     util.check_network()
     set_globals(label=label, location=location)
 
     if toggle:
-        mode = state.next_state(statefile=get_statefile(), mode_count=mode_count)
+        mode = state.next_state(statefile=STATEFILE, mode_count=mode_count)
     else:
-        mode = state.read_state(statefile=get_statefile())
+        mode = state.read_state(statefile=STATEFILE)
+    
+    logging.info(f'[run] api_key={"redacted" if api_key else "N/A"}, location="{location}", use_celsius={use_celsius}, label="{label}", mode={mode}, background={background}, interval={interval}')
+    
+    if background:
+        if LOCKFILE.exists():
+            logging.info('[worker] worker already running, exiting')
+            return
 
-    subprocess.run(['polybar-msg', 'action', f'#weather-{label}.send.{LOADING}'])
-    get_weather_data(api_key, location, use_celsius, label, mode)
-    subprocess.run(['polybar-msg', 'action', f'#weather-{label}.hook.0'])
+        subprocess.run(['polybar-msg', 'action', f'#weather-{label}.send.{LOADING}'])
+        logging.info('[run] launching background worker')
+        subprocess.Popen(
+            [__file__, 'worker', api_key, location, str(int(use_celsius)), label, str(mode), str(int(background)), str(interval)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True
+        )
+        subprocess.run(['polybar-msg', 'action', f'#weather-{label}.hook.0'])
+    else:
+        subprocess.run(['polybar-msg', 'action', f'#weather-{label}.send.{LOADING}'])
+        logging.info('[run] running in foreground')
+        get_weather(api_key=api_key, location=location, use_celsius=use_celsius, label=label, mode=mode)
+        subprocess.run(['polybar-msg', 'action', f'#weather-{label}.hook.0'])
+
+@cli.command()
+@click.argument('api_key', type=str, required=True)
+@click.argument('location', type=str, required=True)
+@click.argument('use_celsius', type=int, required=False)
+@click.argument('label', type=str, required=True)
+@click.argument('mode', type=int, required=True)
+@click.argument('background', type=int, required=False)
+@click.argument('interval', type=int, required=False)
+def worker(api_key, location, use_celsius, label, mode, background=1, interval=300):
+    global LOCKFILE
+
+    set_globals(label=label, location=location)
+    logging.info(f'[worker] starting worker loop - LOCKFILE={LOCKFILE}')
+    setup_signal_handlers()
+    LOCKFILE.write_text(str(os.getpid()))
+
+    try:
+        while True:
+            subprocess.run(['polybar-msg', 'action', f'#weather-{label}.send.{LOADING}'])
+            logging.info('[worker] entered main loop iteration')
+            if not util.polybar_is_running():
+                logging.info('[worker] polybar not running, shutting down')
+                break
+
+            get_weather(api_key=api_key, location=location, use_celsius=bool(use_celsius), label=label, mode=mode)
+            logging.info('[worker] returned from get_weather')
+            subprocess.run(['polybar-msg', 'action', f'#weather-{label}.hook.0'])
+
+            if interval > 0:
+                logging.info(f'[worker] sleeping for {interval} seconds before next run')
+                time.sleep(interval)
+            else:
+                logging.info('[worker] interval <= 0, exiting after one run')
+                break
+    except Exception as e:
+        logging.error(f'[worker] unhandled exception: {e}\n{traceback.format_exc()}')
+    finally:
+        cleanup_lockfile()
+        logging.info('[worker] exiting worker loop')
 
 if __name__ == '__main__':
     cli()
