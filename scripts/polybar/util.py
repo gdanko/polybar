@@ -268,7 +268,7 @@ def parse_json_string(input: str=''):
         return None, err, 
 
 def is_binary_installed(binary_name: str) -> bool:
-    return shutil.which(binary_name) is not None
+    return shutil.which(binary_name)
 
 def missing_binaries(binaries: list=[]):
     missing = []
