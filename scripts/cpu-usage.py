@@ -66,21 +66,6 @@ def get_cpu_freq():
     freq_max = stdout if (rc == 0 and stdout and stdout != '') else -1
 
     return int(freq_cur) * 1000, int(freq_min) * 1000, int(freq_max) * 1000
-    # command = f'lscpu | grep "CPU max MHz"'
-    # rc, stdout, _ = util.run_piped_command(command)
-    # if rc == 0:
-    #     bits = re.split(r'\s*:\s*', stdout)
-    #     if len(bits) == 2:
-    #         # error checking
-    #         freq = int(float(bits[1]))
-    #         if freq < 1000:
-    #             return f'{freq} MHz'
-    #         else:
-    #             return f'{util.pad_float(float(freq / 1000))} GHz'
-    #     else:
-    #         return 'Unknown CPU freq'
-    # else:
-    #     return 'Unknown CPU freq'
 
 def get_logical_cpu_cores():
     command = 'grep -c ^processor /proc/cpuinfo'
