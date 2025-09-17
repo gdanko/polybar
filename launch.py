@@ -43,6 +43,13 @@ class RightPadFormatter(logging.Formatter):
 #----------------------------
 # Common helpers
 #----------------------------
+def get_duration(created: int=0) -> str:
+    d, h, m, s = util.duration(int(time.time()) - created)
+    if d > 0:
+        return f'[{d:02d}d {h:02d}h {m:02d}m {s:02d}s]'
+    else:
+        return f'[{h:02d}h {m:02d}m {s:02d}s]'
+
 def get_background_scripts():
     processes = []
     for proc in psutil.process_iter(attrs=['cmdline', 'create_time', 'name', 'pid', 'username']):
@@ -58,12 +65,6 @@ def get_background_scripts():
                         'pid'      : proc.info.get('pid'),
                         'username' : proc.info.get('username'),
                     }
-                    days, hours, minutes, secs = util.duration(int(time.time()) - new_process['created'])
-                    if days == 0:
-                        duration = f'[{hours}h {minutes}m {secs}s]'
-                    else:
-                        duration = f'[{days}d {hours}h {minutes}m {secs}s]'
-                    new_process['duration'] = duration
 
                     processes.append(new_process)
 
@@ -77,12 +78,13 @@ def polybar_is_running():
     for proc in psutil.process_iter(attrs=['cmdline', 'create_time', 'name', 'pid', 'username']):
         try:
             if proc.info.get('cmdline') is not None:
-                cmdline = ' '.join(list(proc.info['cmdline']))
-                if cmdline == f'{binary} {BAR_NAME}' and proc.info.get('username') == getpass.getuser():
+                cmd = ' '.join(list(proc.info['cmdline']))
+                if cmd == f'{binary} {BAR_NAME}' and proc.info.get('username') == getpass.getuser():
                     return {
-                        'cmd'      : cmdline,
+                        'cmd'      : cmd,
                         'cmdline'  : list(proc.info.get('cmdline')) if proc.info.get('cmdline') is not None else [],
                         'created'  : int(proc.info.get('create_time')),
+                        'modules'  : get_background_scripts(),
                         'pid'      : proc.info.get('pid'),
                         'username' : proc.info.get('username'),
                     }
@@ -94,9 +96,9 @@ def process_is_alive(pid: int=0, command: str=None):
     try:
         proc = psutil.Process(pid)
         proc_info = proc.as_dict(attrs=['cmdline', 'create_time', 'name', 'pid', 'username'])
-        cmdline = ' '.join(proc_info.get('cmdline')) if proc_info.get('cmdline') is not None else None
+        cmd = ' '.join(proc_info.get('cmdline')) if proc_info.get('cmdline') is not None else None
         output = {
-            'cmd'      : cmdline,
+            'cmd'      : cmd,
             'cmdline'  : list(proc_info.get('cmdline')) if proc_info.get('cmdline') is not None else [],
             'created'  : int(proc_info.get('create_time')),
             'pid'      : proc_info.get('pid'),
@@ -118,7 +120,7 @@ def parse_statefile():
             return None
     return None
 
-def compare_statefile_with_pid(proc=None, state=None):
+def compare_statefile_with_proc(state=None, proc=None):
     if not state:
         state = parse_statefile()
     if not proc:
@@ -130,6 +132,22 @@ def compare_statefile_with_pid(proc=None, state=None):
         state.get('username') == proc.get('username') and
         state.get('created') == proc.get('created')
     )
+
+def show_module_differences(state=None, proc=None):
+    if not state:
+        state = parse_statefile()
+    if not proc:
+        proc = polybar_is_running()
+
+    differences = []
+    for i, (left, right) in enumerate(zip(state, proc)):
+        for k in set(left) | set(right):
+            if left.get(k) != right.get(k):
+                differences.append({
+                    'item'  : json.dumps(left),
+                    'state' : left.get(k),
+                    'proc'  : right.get(k)
+                })
 
 #----------------------------
 # Setup and configuration
@@ -443,10 +461,16 @@ def restart(debug, pid):
 def status(debug, pid, detail):
     setup(debug=debug)
     proc = polybar_is_running()
+    state = parse_statefile()
+
     if proc:
         message = f'polybar is running with PID {proc["pid"]}'
-        processes = get_background_scripts()
-        pids = [str(process['pid']) for process in processes if process.get('pid') is not None]
+        # Rewerite the state file if the two mismatch, eventually compare module differences as well
+        if not compare_statefile_with_proc(state=state, proc=proc):
+            print(f'the state file "{STATEFILE}" doesn\'t match the current state; rewriting')
+            write_launch_state(pid = proc.get('pid'))
+
+        pids = [str(process['pid']) for process in proc.get('modules') if process.get('pid') is not None]
         if len(pids) > 0:
             message += f' and is managing {len(pids)} background {"module" if len(pids) == 1 else "modules"}'
         print(message)
@@ -454,12 +478,11 @@ def status(debug, pid, detail):
         if detail:
             longest_duration = 0
             longest_pid = 0
-            for process in processes:
-                days, hours, minutes, _ = util.duration(int(time.time()) - process['created'])
+            for process in proc.get('modules'):
+                process['duration'] = get_duration(created=process['created'])
                 longest_duration = len(process['duration']) if len(process['duration']) > longest_duration else longest_duration
-                longest_pid = len(str(process['pid'])) if len(str(process['pid'])) > longest_pid else longest_pid
 
-            for process in processes:
+            for process in proc.get('modules'):
                 print(f'{process["pid"]:{longest_pid}} {process["duration"]:<{longest_duration}} {process["cmd_short"]}')
     else:
         print('polybar isn\'t running running')
