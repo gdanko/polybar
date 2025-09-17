@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+from pathlib import Path, PurePosixPath
 from pprint import pprint
 from scripts.polybar import util
 import click
 import configparser
 import getpass
+import json
 import logging
 import os
 import psutil
@@ -14,8 +16,17 @@ import subprocess
 import sys
 import time
 
+# Constants
 BAR_NAME = 'main'
+CONFIG_FILE = Path(PurePosixPath(util.get_config_directory())) / 'config.ini'
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+LOGFILE = Path.home() / f'polybar-{BAR_NAME}.log'
+STATEFILE = Path.home() / '.polybar-launch-state.json'
+
+# Globals
+CONFIG : configparser.ConfigParser | None = None
+IPC_ENABLED : bool | None = None
+PROCESS_NAME : str | None = None
 
 class RightPadFormatter(logging.Formatter):
     def __init__(self, levelnames):
@@ -28,6 +39,97 @@ class RightPadFormatter(logging.Formatter):
         pad_len = self.max_len - len(record.levelname)
         record.pad = ' ' * (pad_len + 1)  # +1 for spacing
         return super().format(record)
+
+#----------------------------
+# Common helpers
+#----------------------------
+def get_background_scripts():
+    processes = []
+    for proc in psutil.process_iter(attrs=['cmdline', 'create_time', 'name', 'pid', 'username']):
+        try:
+            if proc.info.get('cmdline') is not None and len(proc.info.get('cmdline')) > 0:
+                cmdline = ' '.join(list(proc.info['cmdline']))
+                if len(proc.info['cmdline']) > 2:
+                    cmd_short = ' '.join(list(proc.info['cmdline'][:2]))
+                if cmdline.startswith('python3') and util.get_script_directory() in cmdline and proc.info.get('username') == getpass.getuser():
+                    new_process = {
+                        'cmd_short': cmd_short,
+                        'created'  : int(proc.info.get('create_time')) if proc.info.get('create_time') is not None else 0,
+                        'pid'      : proc.info.get('pid'),
+                        'username' : proc.info.get('username'),
+                    }
+                    days, hours, minutes, secs = util.duration(int(time.time()) - new_process['created'])
+                    if days == 0:
+                        duration = f'[{hours}h {minutes}m {secs}s]'
+                    else:
+                        duration = f'[{days}d {hours}h {minutes}m {secs}s]'
+                    new_process['duration'] = duration
+
+                    processes.append(new_process)
+
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    return processes
+
+def polybar_is_running():
+    binary = util.is_binary_installed('polybar')
+    for proc in psutil.process_iter(attrs=['cmdline', 'create_time', 'name', 'pid', 'username']):
+        try:
+            if proc.info.get('cmdline') is not None:
+                cmdline = ' '.join(list(proc.info['cmdline']))
+                if cmdline == f'{binary} {BAR_NAME}' and proc.info.get('username') == getpass.getuser():
+                    return {
+                        'cmd'      : cmdline,
+                        'cmdline'  : list(proc.info.get('cmdline')) if proc.info.get('cmdline') is not None else [],
+                        'created'  : int(proc.info.get('create_time')),
+                        'pid'      : proc.info.get('pid'),
+                        'username' : proc.info.get('username'),
+                    }
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return None
+
+def process_is_alive(pid: int=0, command: str=None):
+    try:
+        proc = psutil.Process(pid)
+        proc_info = proc.as_dict(attrs=['cmdline', 'create_time', 'name', 'pid', 'username'])
+        cmdline = ' '.join(proc_info.get('cmdline')) if proc_info.get('cmdline') is not None else None
+        output = {
+            'cmd'      : cmdline,
+            'cmdline'  : list(proc_info.get('cmdline')) if proc_info.get('cmdline') is not None else [],
+            'created'  : int(proc_info.get('create_time')),
+            'pid'      : proc_info.get('pid'),
+            'username' : proc_info.get('username'),
+        }
+    except:
+        return False 
+    
+    if command:
+        return output if (proc.pid == pid and cmdline == command and proc_info.get('username') == getpass.getuser()) else None
+    else:
+        return output if (proc.pid == pid and proc_info.get('username') == getpass.getuser()) else None
+
+def parse_statefile():
+    if STATEFILE.exists():
+        try:
+            return json.loads(STATEFILE.read_text())
+        except:
+            return None
+    return None
+
+def compare_statefile_with_pid(proc=None, state=None):
+    if not state:
+        state = parse_statefile()
+    if not proc:
+        proc = polybar_is_running()
+
+    return (
+        state.get('pid') == proc.get('pid') and
+        state.get('cmdline') == proc.get('cmdline') and
+        state.get('username') == proc.get('username') and
+        state.get('created') == proc.get('created')
+    )
 
 #----------------------------
 # Setup and configuration
@@ -43,15 +145,15 @@ def configure_logging(debug: bool=False):
     logger.setLevel(logging.DEBUG) if debug else logger.setLevel(logging.INFO)
     logger.addHandler(handler)
 
-def parse_config(filename: str=None):
+def parse_config():
     """
     Parse config.ini and return it as a ConfigParser object
     """
     try:
         parser = configparser.ConfigParser(interpolation=None)
-        parser.read(filename)
+        parser.read(CONFIG_FILE)
     except Exception as e:
-        logging.error(f'failed to parse the config file {filename}: {e}')
+        logging.error(f'failed to parse the config file {CONFIG_FILE}: {e}')
         sys.exit(1)
 
     return parser
@@ -60,6 +162,8 @@ def setup(debug: bool=False):
     """
     Run some quick checks and return relevant bits
     """
+    global CONFIG, IPC_ENABLED, PROCESS_NAME
+
     for binary in ['polybar', 'polybar-msg']:
         if not util.is_binary_installed(binary):
             logging.error(f'{binary} is not installed')
@@ -67,87 +171,100 @@ def setup(debug: bool=False):
 
     configure_logging(debug=debug)
 
-    polybar_config_file = os.path.join(util.get_config_directory(), 'config.ini')
-    polybar_config = parse_config(filename=polybar_config_file)
 
-    if f'bar/{BAR_NAME}' in polybar_config:
-        if 'enable-ipc' in polybar_config[f'bar/{BAR_NAME}']:
-            ipc_enabled = True if polybar_config[f'bar/{BAR_NAME}']['enable-ipc'] == 'true' else False
+    PROCESS_NAME = f'{util.is_binary_installed('polybar')} {BAR_NAME}'
+    CONFIG = parse_config()
 
-    return polybar_config, ipc_enabled
+    if f'bar/{BAR_NAME}' in CONFIG:
+        if 'enable-ipc' in CONFIG[f'bar/{BAR_NAME}']:
+            IPC_ENABLED = True if CONFIG[f'bar/{BAR_NAME}']['enable-ipc'] == 'true' else False
 
 #----------------------------
 # Start functions
 #----------------------------
-def start_polybar(polybar_config=None, bar_name: str=None, ipc_enabled: bool=False, debug: bool=False, pid: str=None):
+def start_polybar():
     """
     A simple wrapper for starting polybar
     """
-    pid = polybar_is_running()
-    if pid:
-        print(f'polybar is running with PID {pid}; please use stop or restart')
+    proc = polybar_is_running()
+    if proc:
+        print(f'polybar is running with PID {proc.get("pid")}; please use stop or restart')
+
+        state = parse_statefile()
+        if not compare_statefile_with_pid(proc=proc, state=state):
+            print(f'the statefile doesn\'t align with the current process; rewriting the file')
+            write_launch_state(pid=proc.get('pid'))
         sys.exit(0)
 
     print('starting polybar')
     stop_scripts()
-    launch_polybar(bar_name=bar_name)
-    background_processes(polybar_config=polybar_config)
+    pid = launch_polybar()
+    background_processes()
+    time.sleep(2)
+    write_launch_state(pid=pid)
 
-def polybar_is_running():
-    for proc in psutil.process_iter(attrs=['pid', 'cmdline', 'username']):
-        try:
-            if proc.info.get('cmdline') is not None and len(proc.info.get('cmdline')) > 0:
-                cmdline = ' '.join(list(proc.info['cmdline']))
-                if cmdline == f'polybar {BAR_NAME}' and proc.info.get('username') == getpass.getuser():
-                    return proc.info.get('pid')
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-    return None
-
-def launch_polybar(bar_name: str=None):
+def launch_polybar():
     """
     Attempt to launch polybar
     """
-    # Here we'll simulate what's done in launch.sh
-    logfile_name = os.path.join(
-        util.get_home_directory(),
-        f'polybar-{bar_name}.log',
-    )
+    binary = util.is_binary_installed('polybar')
 
+    # Here we'll simulate what's done in launch.sh
     # Step 1: Append '---' to the log file
     # echo "---" | tee -a /tmp/polybar-${BAR_NAME}.log
     try:
-        with open(logfile_name, 'a') as f:
+        with open(LOGFILE, 'a') as f:
             f.write('---\n')
     except Exception as e:
-        logging.error(f'failed to append the log file {logfile_name}: {e}')
+        logging.error(f'failed to append the log file {LOGFILE}: {e}')
         sys.exit(1)
 
     # Step 2: Start polybar, redirect output, and run it in the background detached
     # polybar ${BAR_NAME} 2>&1 | tee -a /tmp/polybar-${BAR_NAME}.log & disown
-    command = ['polybar', bar_name]
+    command = [binary, BAR_NAME]
     try:
-        with open(logfile_name, 'a') as f:
+        with open(LOGFILE, 'a') as f:
             proc = subprocess.Popen(command,
                 stdout     = f,
                 stderr     = subprocess.STDOUT,
                 preexec_fn = os.setpgrp  # Detach like 'disown'
             )
             print(f'successfully launched polybar with PID {proc.pid}')
+            return proc.pid
     except Exception as e:
         logging.error(f'failed to launch polybar: {e}')
         sys.exit(1)
 
-def background_processes(polybar_config=None):
+def write_launch_state(pid: int=0):
+    try:
+        proc = psutil.Process(pid)
+        proc_info = proc.as_dict(attrs=['cmdline', 'create_time', 'name', 'pid', 'username'])
+    except:
+        logging.error(f'hmmmm PID {pid} doesn\'t seem to exist')
+        sys.exit(1)
+
+    launch_state = {
+        'cmd'      : ' '.join(list(proc_info.get('cmdline'))) if proc_info.get('cmdline') is not None else None,
+        'cmdline'  : list(proc_info.get('cmdline')) if proc_info.get('cmdline') is not None else [],
+        'created'  : int(proc_info.get('create_time')),
+        'modules'  : get_background_scripts(),
+        'pid'      : proc_info.get('pid'),
+        'username' : proc_info.get('username'),
+    }
+    STATEFILE.write_text(json.dumps(launch_state, indent=4))
+
+def background_processes():
     """
     Find all of the modules that are defined in config.ini, determine which are
     defined in modules-left/right, and if they are configured to run in the 
     background, attempt to do so
     """
-    all_modules = sorted([section.replace('module/', '') for section in polybar_config.sections() if section.startswith('module/')])
+    global CONFIG
+
+    all_modules = sorted([section.replace('module/', '') for section in CONFIG.sections() if section.startswith('module/')])
     common_modules = sorted(list(set(find_enabled_modules()) & set(all_modules)))
     for module_name in common_modules:
-        background(module_name=module_name, polybar_config=polybar_config)
+        background(module_name=module_name)
 
 def find_enabled_modules() -> list:
     """
@@ -168,12 +285,14 @@ def find_enabled_modules() -> list:
 
     return sorted(enabled_modules)
 
-def background(module_name: str=None, str=None, polybar_config=None):
+def background(module_name: str=None):
     """
     Attempt to put a module into the background with its configured flags
     """
+    global CONFIG
+
     try:
-        module_config = dict(polybar_config[f'module/{module_name}'])
+        module_config = dict(CONFIG[f'module/{module_name}'])
         if 'background' in module_config:
             module_config['background'] = True if module_config['background'] == 'true' else False
     except Exception as e:
@@ -220,7 +339,7 @@ def background(module_name: str=None, str=None, polybar_config=None):
 #----------------------------
 # Stop functions
 #----------------------------
-def stop_polybar(ipc_enabled: bool=False, pid: str=None):
+def stop_polybar(pid: str=None):
     """
     A simple wrapper for stopping polybar
     """
@@ -230,61 +349,34 @@ def stop_polybar(ipc_enabled: bool=False, pid: str=None):
         sys.exit(0)
 
     print('stopping polybar')
-    kill_polybar_if_running(ipc_enabled=ipc_enabled, pid=pid)
+    kill_polybar_if_running(pid=pid)
     time.sleep(.5)
     stop_scripts()
 
-def kill_polybar_if_running(ipc_enabled: bool=False, pid: str=None):
+def kill_polybar_if_running(pid: str=None):
     """
     Kill polybar if it's running
     """
+    global IPC_ENABLED
+
     pid = polybar_is_running()
     if polybar_is_running():
         if pid:
-            command = f'polybar-msg -p {pid} cmd quit' if ipc_enabled else f'kill {pid}'
+            command = f'polybar-msg -p {pid} cmd quit' if IPC_ENABLED else f'kill {pid}'
         else:
             # FIND THE RUNNING PID FOR BAR_NAME
-            command = f'polybar-msg cmd quit' if ipc_enabled else 'killall -q polybar'
+            command = f'polybar-msg cmd quit' if IPC_ENABLED else 'killall -q polybar'
 
         rc, _, stderr = util.run_piped_command(command)
         if rc != 0:
             error = stderr if stderr != '' else 'unknown error'
             logging.error(f'failed to execute "{command}": {error}')
             sys.exit(1)
+        
+
     else:
         print('polybar isn\'t running')
         sys.exit(0)
-
-def get_background_scripts():
-    script_directory = util.get_script_directory()
-    processes = []
-    for proc in psutil.process_iter(attrs=['cmdline', 'create_time', 'name', 'pid', 'username' ]):
-        try:
-            if proc.info.get('cmdline') is not None and len(proc.info.get('cmdline')) > 0:
-                cmdline = ' '.join(list(proc.info['cmdline']))
-                if len(proc.info['cmdline']) > 2:
-                    cmd_short = ' '.join(list(proc.info['cmdline'][:2]))
-                if cmdline.startswith('python3') and script_directory in cmdline and proc.info.get('username') == getpass.getuser():
-                    new_process = {
-                        'cmd'      : cmdline,
-                        'cmd_short': cmd_short,
-                        'created'  : int(proc.info.get('create_time')) if proc.info.get('create_time') is not None else 0,
-                        'pid'      : proc.info.get('pid'),
-                        'username' : proc.info.get('username'),
-                    }
-                    days, hours, minutes, secs = util.duration(int(time.time()) - new_process['created'])
-                    if days == 0:
-                        duration = f'[{hours}h {minutes}m {secs}s]'
-                    else:
-                        duration = f'[{days}d {hours}h {minutes}m {secs}s]'
-                    new_process['duration'] = duration
-
-                    processes.append(new_process)
-
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-
-    return processes
 
 def stop_scripts():
     """
@@ -296,7 +388,7 @@ def stop_scripts():
     if len(processes) > 0:
         print(f'stopping {len(processes)} background {"script" if len(processes) == 1 else "scripts"}')
         for process in processes:
-            cmd = process['cmd']
+            cmd = process['cmd_short']
             pid = process['pid']
 
             try:
@@ -325,34 +417,34 @@ def cli():
 @click.option('-d', '--debug', is_flag=True, help='Show debug logging')
 @click.option('-p', '--pid', help='Specify a pid')
 def start(debug, pid):
-    polybar_config, ipc_enabled = setup(debug=debug)
-    start_polybar(polybar_config=polybar_config, bar_name=BAR_NAME, ipc_enabled=ipc_enabled, debug=debug, pid=pid)
+    setup(debug=debug)
+    start_polybar()
 
 @cli.command(name='stop', help='Stop polybar and its backgound modules')
 @click.option('-d', '--debug', is_flag=True, help='Show debug logging')
 @click.option('-p', '--pid', help='Specify a pid')
 def stop(debug, pid):
-    _, ipc_enabled = setup(debug=debug)
-    stop_polybar(ipc_enabled=ipc_enabled, pid=pid)
+    setup(debug=debug)
+    stop_polybar(pid=pid)
 
 @cli.command(name='restart', help='Restart polybar and its backgound modules')
 @click.option('-d', '--debug', is_flag=True, help='Show debug logging')
 @click.option('-p', '--pid', help='Specify a pid')
 def restart(debug, pid):
-    polybar_config, ipc_enabled = setup(debug=debug)
-    stop_polybar(ipc_enabled=ipc_enabled)
+    setup(debug=debug)
+    stop_polybar()
     time.sleep(.5)
-    start_polybar(polybar_config=polybar_config, bar_name=BAR_NAME, ipc_enabled=ipc_enabled,debug=debug, pid=pid)
+    start_polybar(pid=pid)
 
 @cli.command(name='status', help='Get the status of polybar and its background modules')
 @click.option('-d', '--debug', is_flag=True, help='Show debug logging')
 @click.option('-p', '--pid', help='Specify a pid')
 @click.option('--detail', is_flag=True, help='Show detailed information about any running background modules')
 def status(debug, pid, detail):
-    polybar_config, ipc_enabled = setup(debug=debug)
-    pid = polybar_is_running()
-    if pid:
-        message = f'polybar is running with PID {pid}'
+    setup(debug=debug)
+    proc = polybar_is_running()
+    if proc:
+        message = f'polybar is running with PID {proc["pid"]}'
         processes = get_background_scripts()
         pids = [str(process['pid']) for process in processes if process.get('pid') is not None]
         if len(pids) > 0:
@@ -378,9 +470,8 @@ def status(debug, pid, detail):
 @click.option('-d', '--debug', is_flag=True, help='Show debug logging')
 @click.option('-p', '--pid', help='Specify a pid')
 def dummy(debug, pid):
-    polybar_config, ipc_enabled = setup(debug=debug)
+    setup(debug=debug)
     print('i do nothing')
-    util.pprint(get_background_scripts())
 
 if __name__ == '__main__':
     cli()
