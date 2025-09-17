@@ -289,6 +289,8 @@ def get_weather(api_key: str=None, location: str=None, use_celsius: bool=False, 
             TEMPFILE.write_text(f'{util.color_title(glyphs.md_weather_sunny)} {location}  {glyphs.weather_sunrise}  {sunrise} {glyphs.weather_sunset}  {sunset}')
         elif mode == 4:
             TEMPFILE.write_text(f'{util.color_title(glyphs.md_weather_sunny)} {location} {glyphs.weather_moonrise} {moonrise} {glyphs.weather_moonset} {moonset}')
+        elif mode == 5:
+            TEMPFILE.write_text(f'{util.color_title(glyphs.md_weather_sunny)} {location} humidity {weather_data.humidity}')
     else:
         TEMPFILE.write_text(f'{util.color_title(glyphs.md_alert)} {util.color_error(weather_data.error)}')
 
@@ -347,7 +349,7 @@ def run(api_key, location, use_celsius, label, toggle, background, interval):
     global LOCKFILE
     global STATEFILE
 
-    mode_count = 5
+    mode_count = 6
     util.check_network()
     set_globals(label=label, location=location)
 
