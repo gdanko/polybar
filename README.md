@@ -279,7 +279,7 @@ hook-0 = ~/.config/polybar/scripts/speedtest.py show
 hook-1 = ~/.config/polybar/scripts/speedtest.py run
 click-left = ~/.config/polybar/scripts/speedtest.py run
 ```
-When executed, `hook-1` is executed because `initial = 2`. The `run` action first writes the loading test to the temp file and then executes the test in the backround and immediately exectutes `hook-0`, which executions the script with the `show` action.
+When executed, `hook-1` is executed because `initial = 2`. The `run` action first writes the loading text to the temp file and then executes the test in the backround and immediately exectutes `hook-0`, which executions the script with the `show` action.
 
 ## Permissions
 You will need to add yourself to `/etc/sudoers` in order to execute some commands. Do something like this. Obviously pick only the ones you need.
