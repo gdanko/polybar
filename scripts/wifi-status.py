@@ -81,6 +81,12 @@ def get_wifi_status(interface):
     return wifi_status
 
 def main():
+    # nmcli -f GENERAL,WIFI-PROPERTIES dev show wlo1
+    # iwconfig wlo1 | grep -i --color quality
+    # iwlist --help
+    # iw dev wlo1 info | grep channel
+    # iwgetid -r
+
     parser = argparse.ArgumentParser(description="Get WiFi status from iwconfig(8)")
     parser.add_argument("-i", "--interface", help="The interface to check", required=True)
     args = parser.parse_args()
