@@ -148,58 +148,6 @@ def get_wifi_status(interface: str=None):
 
     return wifi_status
 
-def get_wifi_status1(interface: str=None):
-    """
-    Execute iwconfig against each interface to get its status as a namedtuple
-    """
-    foo(interface=interface)
-    # signal = get_signal(interface=interface)
-    # ssid   = get_ssid()
-
-    # print(signal)
-    # print(ssid)
-    exit()
-
-
-    command = f'iwconfig {interface}'
-    rc, stdout, stderr = util.run_piped_command(command)
-    if rc == 0:
-        if stdout != '':
-            match = re.search(r"Signal level=(-?\d+)\s*dBm", stdout)
-            if match:
-                wifi_status = WifiStatus(
-                    success   = True,
-                    interface = interface,
-                    signal    = int(match.group(1)),
-                )
-            else:
-                wifi_status = WifiStatus(
-                    success   = False,
-                    interface = interface,
-                    error     = f'regex failure on output',
-                )
-        else:
-            status_dict = {
-                'success':   False,
-                'interface': interface,
-                'error':     f'no output from iwconfig {interface}',
-            }
-    else:
-        if stderr != '':
-            wifi_status = WifiStatus(
-                success   = False,
-                interface = interface,
-                error     = stderr,
-            )
-        else:
-            wifi_status = WifiStatus(
-                success   = False,
-                interface = interface,
-                error     = f'failed to execute {command}',
-            )
-    
-    return wifi_status
-
 @click.group(context_settings=CONTEXT_SETTINGS)
 def cli():
     """
