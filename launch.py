@@ -209,7 +209,7 @@ def start_polybar():
         print(f'polybar is running with PID {proc.get("pid")}; please use stop or restart')
 
         state = parse_statefile()
-        if not compare_statefile_with_pid(proc=proc, state=state):
+        if not compare_statefile_with_proc(proc=proc, state=state):
             print(f'the statefile doesn\'t align with the current process; rewriting the file')
             write_launch_state(pid=proc.get('pid'))
         sys.exit(0)
