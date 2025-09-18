@@ -446,7 +446,7 @@ def show(type):
 @click.option('-i', '--interval', type=int, default=300, show_default=True, help='The update interval (in seconds)')
 def run(type, background, interval):
     """
-    Run update check once or as a daemon
+    Run update check once or in the background
     """
     util.network_is_reachable()
     tempfile = get_tempfile_name(package_type=type)

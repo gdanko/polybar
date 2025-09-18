@@ -3,7 +3,6 @@
 from pathlib import Path
 from polybar import glyphs, util
 from typing import Optional, NamedTuple
-import click
 import logging
 import os
 import signal
@@ -14,6 +13,7 @@ import traceback
 
 # Ensure required modules are present
 util.validate_requirements(required=['click', 'speedtest'])
+import click
 import speedtest
 
 # Named tuples for structured results

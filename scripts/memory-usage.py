@@ -215,7 +215,7 @@ def main():
     parser.add_argument('-b', '--background', action='store_true', help='Run this script in the background', required=False)
     args = parser.parse_args()
 
-    # Daemon mode: periodic updates
+    # Background mode: periodic updates
     if args.background:
         # Wait a bit to let Polybar fully initialize
         time.sleep(1)

@@ -377,10 +377,10 @@ def kill_polybar_if_running(pid: str=None):
     """
     global IPC_ENABLED
 
-    pid = polybar_is_running()
+    proc = polybar_is_running()
     if polybar_is_running():
-        if pid:
-            command = f'polybar-msg -p {pid} cmd quit' if IPC_ENABLED else f'kill {pid}'
+        if proc:
+            command = f'polybar-msg -p {proc.get("pid")} cmd quit' if IPC_ENABLED else f'kill {proc.get("pid")}'
         else:
             # FIND THE RUNNING PID FOR BAR_NAME
             command = f'polybar-msg cmd quit' if IPC_ENABLED else 'killall -q polybar'
@@ -452,7 +452,7 @@ def restart(debug, pid):
     setup(debug=debug)
     stop_polybar()
     time.sleep(.5)
-    start_polybar(pid=pid)
+    start_polybar()
 
 @cli.command(name='status', help='Get the status of polybar and its background modules')
 @click.option('-d', '--debug', is_flag=True, help='Show debug logging')
