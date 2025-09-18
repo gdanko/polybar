@@ -9,8 +9,8 @@ import re
 import sys
 import time
 
-_disk_identifier : str | None = None
-_disk_label      : str | None = None
+DISK_IDENTIFIER : str | None = None
+DISK_LABEL      : str | None = None
 
 class FilesystemInfo(NamedTuple):
     success    : Optional[bool]  = False
@@ -39,26 +39,26 @@ def set_label(label: str=None):
     """
     Set the global label variable
     """
-    global _label
-    _disk_label = label
+    global DISK_LABEL
+    DISK_LABEL = label
 
 def set_disk_identifier(mountpoint: str=None):
     """
     Set the disk UUID
     """
-    global _disk_identifier
-    global _label
+    global DISK_IDENTIFIER, DISK_LABEL
+
     uuid = get_uuid(mountpoint=mountpoint)
 
-    _disk_identifier = uuid if uuid else _label
+    DISK_IDENTIFIER = uuid if uuid else DISK_LABEL
     
 def get_statefile() -> str:
-    global _disk_identifier
+    global DISK_IDENTIFIER
 
     statefile = os.path.basename(__file__)
     statefile_no_ext = os.path.splitext(statefile)[0]
 
-    return Path.home() / f'.polybar-{statefile_no_ext}-{_disk_identifier}-state'
+    return Path.home() / f'.polybar-{statefile_no_ext}-{DISK_IDENTIFIER}-state'
 
 def get_disk_usage(mountpoint: str) -> list:
     """
@@ -134,7 +134,7 @@ def main():
     set_label(label=args.label)
     set_disk_identifier(mountpoint=args.mountpoint)
 
-    # Daemon mode: periodic updates
+    # Background mode: periodic updates
     if args.background:
         # Wait a bit to let Polybar fully initialize
         time.sleep(1)
