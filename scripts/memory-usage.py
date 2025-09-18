@@ -193,16 +193,10 @@ def get_memory_usage():
                 error   = 'no output from free',
             )
     else:
-        if stderr != '':
-            mem_info = MemoryInfo(
-                success = False,
-                error   = stderr,
-            )
-        else:
-            mem_info = MemoryInfo(
-                success = False,
-                error   = f'failed to execute {command}',
-            )
+        mem_info = MemInfo(
+            success   = False,
+            error     = stderr if stderr != '' else f'failed to execute "{command}"',
+        )
 
     return mem_info
 

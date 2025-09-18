@@ -57,16 +57,10 @@ def get_swap_usage():
                 error   = 'no output from free',
             )
     else:
-        if stderr != '':
-            swap_info = SwapInfo(
-                success = False,
-                error   = stderr,
-            )
-        else:
-            swap_info = SwapInfo(
-                success = False,
-                error   = f'failed to execute {command}',
-            )
+        swap_info = SwapInfo(
+            success   = False,
+            error     = stderr if stderr != '' else f'failed to execute "{command}"',
+        )
 
     return swap_info
 

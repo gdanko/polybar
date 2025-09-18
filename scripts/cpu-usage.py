@@ -144,16 +144,10 @@ def get_cpu_info() -> CpuInfo:
                 error     = f'no output from mpstat',
             )
     else:
-        if stderr != '':
-            cpu_info = CpuInfo(
-                success   = False,
-                error     = stderr,
-            )
-        else:
-            cpu_info = CpuInfo(
-                success   = False,
-                error     = f'failed to execute {command}',
-            )
+        cpu_info = CpuInfo(
+            success   = False,
+            error     = stderr if stderr != '' else f'failed to execute "{command}"',
+        )
 
     return cpu_info
 
