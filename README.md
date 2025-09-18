@@ -222,21 +222,29 @@ background-arg-interval = 300
 ```
 
 ### Wi-Fi Status
-This module displays the signal strength in dBm for the specified interface.
+This module displays the signal strength in dBm for the specified interface and has two available output formats.
 
 #### Output Formats
 1. `wlo1 -48 dBm`
+2. `wlo1 channel 48 (5240 MHz) 160 MHz width`
 
 #### Configuration
+In order for it to be launched in the background, you will need to launch it via `launch.py` or a script with similar functionality. The `background-*` parameters are used to instruct `launch.py` how to properly put the module's worker in the background.
 ```
-[wlan-base]
-type = custom/script
-interval = 10
-exec = ~/.config/polybar/scripts/wifi-status.py --interface "$interface"
+[wifi-status-base]
+type = custom/ipc
+label = %output%
+initial = 1
 
-[module/wlan-wlo1]
-inherit = wlan-base
-env-interface = wlo1
+[module/wifi-status-wlo1]
+inherit = wifi-status-base
+hook-0 = ~/.config/polybar/scripts/wifi-status.py run --interface wlo1
+click-left = ~/.config/polybar/scripts/wifi-status.py run --interface wlo1 --toggle && polybar-msg action wifi-status-wlo1 hook 0
+background = true
+background-action = run
+background-script = wifi-status.py
+background-arg-interval = 2
+background-arg-interface = wlo1
 ```
 
 ## Clickability
