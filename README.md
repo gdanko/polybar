@@ -269,7 +269,7 @@ If any step in the process fails, the script exits with an explanation as to wha
 Note, at every interval, a backgrounded script will check to see if polybar is running. If it is not running, the script exits on its own. Scripts with a longer interval, e.g., `polybar-speedtest` will take a fair amount of time to exit on their own because it may be in a sleep state.
 
 ## Speedtest Hack
-If there is an official way of doing this, please do tell me. :) I wrote the Speedtest script, but the output wouldn't render until the script completed. It didn'tlike that because the module would just pop in and say "Hello! I'm all done, here are the results!" I wanted something to say show, "Hey, I'm doing work here, please hang tight."
+If there is an official way of doing this, please do tell me. :) I wrote the Speedtest script, but the output wouldn't render until the script completed. It didn't like that because the module would just pop in and say "Hello! I'm all done, here are the results!" I wanted something to say show, "Hey, I'm doing work here, please hang tight."
 ```
 [module/speedtest]
 type = custom/ipc
